@@ -1,0 +1,104 @@
+:root {
+  /* ===== カラー（ベース/テキスト） ===== */
+  --bg-app: #f8f9ff;           /* アプリ背景 */
+  --bg-0: #0b0b0c;             /* レガシー互換 */
+  --text-0: #0b1020;           /* 見出し/強調 */
+  --text-1: #0e1327;           /* 本文 */
+  --text-muted: #6b7280;       /* 補助テキスト */
+
+  /* ===== サーフェス階調 ===== */
+  --surface-weak: rgba(255, 255, 255, 0.35);
+  --surface: rgba(255, 255, 255, 0.6);
+  --surface-strong: rgba(255, 255, 255, 0.9);
+  --surface-ultra: rgba(255, 255, 255, 0.98);
+
+  /* ===== 枠線/影 ===== */
+  --border: rgba(10, 10, 20, 0.12);
+  --shadow: 0 10px 30px rgba(30, 30, 60, 0.12), 0 2px 10px rgba(30, 30, 60, 0.06);
+  --shadow-sm: 0 4px 12px rgba(30, 30, 60, 0.12);
+  --shadow-lg: 0 20px 60px rgba(30, 30, 60, 0.18);
+  --elev-1: 0 6px 18px rgba(30, 30, 60, 0.12);
+  --elev-2: 0 10px 30px rgba(30, 30, 60, 0.16);
+
+  /* ===== ブランド/状態色 ===== */
+  --brand: #6b6bff;
+  --brand-strong: #5b5be8;
+  --accent: #9f54ff;
+  --success: #18a058;
+  --warning: #f0a020;
+  --danger: #d03050;
+  --grad-brand: linear-gradient(90deg, var(--brand), var(--accent));
+
+  /* ===== タイポグラフィ ===== */
+  --font-sans: 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system,
+    Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-size-body: 15px;
+  --line-height-body: 1.7;
+  --font-size-small: 13px;
+  --line-height-small: 1.6;
+  --font-size-meta: 12px;
+  --line-height-meta: 1.5;
+  --font-size-code: 13px;
+  --line-height-code: 1.6;
+  /* 見出し（流体タイポ） */
+  --fz-display: clamp(28px, 5.2vw, 44px);
+  --fz-h1: clamp(22px, 3.6vw, 30px);
+
+  /* ===== スペーシング ===== */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+
+  /* ===== 角丸 ===== */
+  --radius-1: 8px;
+  --radius-2: 12px;
+  --radius-3: 16px;
+  --radius-4: 24px;
+  --radius-round: 999px;
+
+  /* ===== コンポーネント寸法 ===== */
+  --topbar-h: 56px;
+  --sidebar-w: min(320px, 22vw);
+  --composer-h: 72px;
+
+  /* ===== フィードバック/アクセシビリティ ===== */
+  --focus-ring: 0 0 0 3px rgba(107, 107, 255, 0.25);
+  --focus-border: var(--brand);
+  --scrollbar-thumb: rgba(107, 107, 255, 0.35);
+  --scrollbar-thumb-hover: rgba(107, 107, 255, 0.5);
+
+  /* ===== コードテーマ ===== */
+  --code-bg: #0f172a;
+  --code-fg: #eef2ff;
+}
+
+/* ===== レスポンシブ寸法（軽微調整） ===== */
+@media (max-width: 960px) {
+  :root { --sidebar-w: 76px; }
+}
+@media (max-height: 720px) {
+  :root { --topbar-h: 48px; }
+}
+
+/* ===== ダークテーマ用トークン上書き ===== */
+html[data-theme="dark"] {
+  --bg-app: #0b1020;
+  --text-0: #c7d2fe;
+  --text-1: #e6eaff;
+  --text-muted: #9aa1b2;
+  --surface-weak: rgba(20, 20, 35, 0.45);
+  --surface: rgba(20, 20, 35, 0.7);
+  --surface-strong: rgba(20, 20, 35, 0.9);
+  --surface-ultra: rgba(14, 16, 28, 0.96);
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0,0,0,0.35);
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.4);
+  --shadow-lg: 0 24px 70px rgba(0,0,0,0.6);
+  --code-bg: #0b1020;
+  --code-fg: #c7d2fe;
+}

@@ -1,0 +1,72 @@
+/* Liquid Glass mode (VisionOS/iOS-like) */
+/* Toggle via: html[data-glass="on"] */
+
+html[data-glass="on"] body { background: linear-gradient(180deg, #ecf1ff, #f8fbff); }
+
+html[data-glass="on"] #bg-gradient {
+  filter: blur(30px) saturate(135%) brightness(1.05) hue-rotate(10deg);
+  opacity: 0.9;
+}
+
+/* Core surfaces */
+html[data-glass="on"] .topbar,
+html[data-glass="on"] .sidebar,
+html[data-glass="on"] .composer,
+html[data-glass="on"] .content,
+html[data-glass="on"] .select-dropdown,
+html[data-glass="on"] .modal-content,
+html[data-glass="on"] .hero-input,
+html[data-glass="on"] .primary-btn,
+html[data-glass="on"] .icon-btn,
+html[data-glass="on"] .chip,
+html[data-glass="on"] .plan-badge {
+  background: rgba(255,255,255,0.55) !important;
+  border-color: rgba(120,130,200,0.25) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: 0 12px 40px rgba(30,40,80,0.12);
+}
+
+/* Bubble content subtle frost */
+html[data-glass="on"] .bubble .content { background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.58)) !important; }
+
+/* Inputs inside glass surfaces */
+html[data-glass="on"] .hero-input input,
+html[data-glass="on"] .composer textarea,
+html[data-glass="on"] .search-box input {
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(245,247,255,0.45));
+  border-color: rgba(120,130,200,0.25);
+}
+
+/* Glass ring focus */
+html[data-glass="on"] :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(107,107,255,0.22), 0 0 0 6px rgba(107,107,255,0.08) !important;
+}
+
+/* Scroll shadow adjust */
+html[data-glass="on"] .messages.has-top-shadow::before { background: linear-gradient(to bottom, rgba(0,0,0,0.05), transparent); }
+html[data-glass="on"] .messages.has-bottom-shadow::after { background: linear-gradient(to top, rgba(0,0,0,0.05), transparent); }
+
+/* Bookmark bubble in glass */
+html[data-glass="on"] .bookmark-bubble { background: rgba(255,255,255,0.55); border-color: rgba(120,130,200,0.25); backdrop-filter: blur(18px) saturate(130%); }
+
+/* Thinking effect: glass capsule */
+html[data-glass="on"] .thinking-bubbles {
+  position: relative;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.45);
+  border: 1px solid rgba(120,130,200,0.25);
+  box-shadow: 0 8px 26px rgba(60,70,120,0.12), inset 0 0 0 1px rgba(255,255,255,0.4);
+}
+html[data-glass="on"] .thinking-bubbles::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255,255,255,0.0), rgba(255,255,255,0.35), rgba(255,255,255,0.0));
+  mix-blend-mode: screen;
+  animation: lg-shimmer 1.8s linear infinite;
+}
+@keyframes lg-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+

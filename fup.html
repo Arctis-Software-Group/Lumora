@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lumora 公正使用ポリシー（FUP） | Arctis Software Group</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink-900:#1f2328; --ink-700:#2f3338; --ink-500:#5b626a; --ink-300:#8d96a0; --ink-200:#c8cdd3; --ink-100:#eef1f4;
+      --bg:#fff; --accent:#7b5cf6; --accent-soft:rgba(123,92,246,.08);
+      --container: 1024px; --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:"Noto Sans JP",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink-900);background:linear-gradient(180deg,#f8f9ff, #ffffff)}
+    header{padding:40px 16px 18px;border-bottom:1px solid var(--ink-100);background:linear-gradient(180deg, #faf7ff 0, #ffffff 60%)}
+    .wrap{max-width:var(--container);margin:0 auto}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#FEE3E0,#C7D6FF)}
+    h1{font-size:28px;margin:12px 0 6px}
+    .meta{color:var(--ink-500);font-size:13px}
+    nav.toc{background:var(--ink-100);border-radius:var(--radius);padding:16px;margin:24px 0}
+    nav.toc a{color:var(--ink-700);text-decoration:none}
+    nav.toc ol{margin:0 0 0 18px;padding:0;line-height:1.9}
+    main{padding:24px 16px 80px}
+    section{max-width:var(--container);margin:0 auto 40px}
+    h2{font-size:20px;margin:0 0 12px;padding-top:12px;border-top:1px solid var(--ink-100)}
+    h3{font-size:16px;margin:18px 0 8px;color:var(--ink-700)}
+    p,li{line-height:1.9}
+    .note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:12px;border-radius:10px;margin:12px 0;color:var(--ink-700)}
+    table{width:100%;border-collapse:collapse;margin:12px 0}
+    th,td{border:1px solid var(--ink-100);padding:10px;text-align:left;vertical-align:top}
+    th{background:#fbfbfe}
+    footer{border-top:1px solid var(--ink-100);padding:24px 16px;color:var(--ink-500);font-size:13px}
+    a{color:#2f6df6}
+    code.inline{background:var(--ink-100);padding:2px 6px;border-radius:8px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:700">Lumora 公正使用ポリシー（FUP）</div>
+          <div class="meta">最終更新日：2025-08-11 ／ 運営：Arctis Software Group</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap">
+      <nav class="toc" aria-label="目次">
+        <strong>目次</strong>
+        <ol>
+          <li><a href="#purpose">第1条（目的）</a></li>
+          <li><a href="#limits">第2条（プラン別使用上限の目安）</a></li>
+          <li><a href="#mechanism">第3条（制限の仕組み）</a></li>
+          <li><a href="#proplus">第4条（Pro / Pro+ プラン特則）</a></li>
+          <li><a href="#abuse">第5条（不正使用と対応）</a></li>
+          <li><a href="#disclaimer">第6条（免責）</a></li>
+          <li><a href="#contact">第7条（お問い合わせ）</a></li>
+        </ol>
+      </nav>
+    </section>
+
+    <section id="purpose" class="wrap">
+      <h2>第1条（目的）</h2>
+      <p>本ポリシーは、AI資源を安定的かつ公平に提供するため、Lumora における利用上限および運用上のルールを定めるものです。全ての利用者が快適に利用できるよう、必要に応じて一時的な制限や調整を行う場合があります。</p>
+    </section>
+
+    <section id="limits" class="wrap">
+      <h2>第2条（プラン別使用上限の目安）</h2>
+      <table>
+  <thead><tr><th>プラン</th><th>使用上限（目安）</th><th>備考</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Free</td>
+      <td>1日100回</td>
+      <td>無料帯は不安定なアクセスや遅延が発生する場合があります。</td>
+    </tr>
+    <tr>
+      <td>Go</td>
+      <td>1日300〜500回</td>
+      <td>学生価格あり。</td>
+    </tr>
+    <tr>
+      <td>Pro</td>
+      <td>1日1000回程度</td>
+      <td><strong>GPT‑5‑Nano 無制限</strong>。機械的利用（自動連投等）は禁止。</td>
+    </tr>
+    <tr>
+      <td>Max</td>
+      <td><strong>月$120 相当のAPIクレジット</strong></td>
+      <td><strong>GPT‑5‑Mini / GPT‑5‑Nano は常時無制限</strong>。超過時は Elite モデルを優先制限。</td>
+    </tr>
+    <tr>
+      <td>Ultra</td>
+      <td><strong>月$190 相当のAPIクレジット</strong></td>
+      <td><strong>GPT‑5‑Mini / GPT‑5‑Nano は常時無制限</strong>。優先スロット適用。</td>
+    </tr>
+  </tbody>
+</table>
+      <div class="note">API提供元（OpenAI、Anthropic、Google、xAI、Amazon など）のレート制限・障害・技術的制約により、無制限プランでも一時的に利用できない時間帯が生じることがあります。</div>
+    </section>
+
+    <section id="mechanism" class="wrap">
+      <h2>第3条（制限の仕組み）</h2>
+      <ol>
+        <li>上限超過または不正検知時には、自動的に一時制限（速度制限／モデル制限／一時停止）が適用されます。</li>
+        <li>日次・時間帯・全体負荷等により、手動での調整を行う場合があります。</li>
+        <li>上限のカウントは暦日（JST）または運用上定める期間単位でリセットします。</li>
+      </ol>
+    </section>
+
+    <section id="proplus" class="wrap">
+      <h2>第4条（Pro / Pro+ プラン特則）</h2>
+      <ol>
+        <li>Pro+ は、<strong>$190〜$210</strong> の月間APIクレジット範囲において、全モデルに対して<strong>ほぼ無制限アクセス</strong>を提供します。</li>
+        <li>同時使用人数や総API消費が比較的少ない期間には、当社裁量により、クレジット残額にかかわらず<strong>完全な無制限アクセス</strong>を提供する場合があります（ユーザー側の申請不要）。</li>
+        <li>上記クレジット枠を超過した場合、Claude / Grok / ChatGPT-4o 等の高負荷（Elite）モデルは一時制限されることがあります。</li>
+        <li>枠超過後も、<strong>GPT-5-Nano / GPT-5-Mini は常時無制限</strong>です。</li>
+        <li>Pro プランでは、<strong>GPT-5-Nano は完全無制限</strong>とし、Nanoの<strong>機械的利用</strong>（自動連投等）を除き、他モデルは原則無制限とします。</li>
+        <li>無料系モデルを含む一部モデルでは、応答遅延・失敗・一時的な利用不可等、<strong>不安定なアクセス</strong>が発生する場合があります。</li>
+        <li>API制限・外部障害等により利用できなかった期間について、当社は裁量により<strong>利用期間の延長措置</strong>を講じる場合がありますが、これを保証するものではありません。</li>
+      </ol>
+    </section>
+
+    <section id="abuse" class="wrap">
+      <h2>第5条（不正使用と対応）</h2>
+      <p>以下の行為は不正使用とみなし、予告なく<strong>即時の利用停止またはアカウント削除（BAN）</strong>を行う場合があります。</p>
+      <ul>
+        <li>自動化ツール・スクリプト等による機械的な大量リクエスト送信（Bot連投等）</li>
+        <li>アカウントの共有・譲渡、第三者になりすましての利用</li>
+        <li>API提供元の規約に反するリレー／トンネリング・キーの不正共有</li>
+        <li>プラン偽装その他、FUP回避を目的とする一切の行為</li>
+      </ul>
+      <p class="meta">詳細は <a href="terms.html#suspension">利用規約 第6条（利用停止・契約解除）</a> を参照してください。</p>
+    </section>
+
+    <section id="disclaimer" class="wrap">
+      <h2>第6条（免責）</h2>
+      <ol>
+        <li>本ポリシーの適用に伴う一時的な制限・速度低下・モデル制限・利用不可等により発生した損害について、当社は一切の責任を負いません。</li>
+        <li>当社は、いかなる場合でも損害賠償（直接・間接・特別・付随・派生・懲罰的損害を含む）を支払う義務を負いません。詳細は <a href="terms.html#liability">利用規約 第5条</a> をご確認ください。</li>
+      </ol>
+    </section>
+
+    <section id="contact" class="wrap">
+      <h2>第7条（お問い合わせ）</h2>
+      <p>FUPに関するご質問は、<a href="mailto:support@lumora.ai">support@lumora.ai</a> までご連絡ください。</p>
+      <p class="meta">関連文書：<a href="terms.html">利用規約</a> ／ <a href="privacy.html">プライバシーポリシー</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      © 2025 Arctis Software Group — <a href="terms.html">利用規約</a> ／ <a href="fup.html">FUP</a> ／ <a href="privacy.html">プライバシー</a>
+    </div>
+  </footer>
+</body>
+</html>
