@@ -57,15 +57,28 @@ export function injectModels() {
   
   container.innerHTML = `
     <div class="custom-select" id="customModelSelect">
-      <div class="select-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+      <div class="select-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelList">
         <div class="selected-model">
           <span class="model-name">${selectedModel.label}</span>
+          <span class="selected-meta" aria-hidden="true">
+            <span class="plan-pill" data-plan="${selectedModel.plan}">${planLabel(selectedModel.plan)}</span>
+            <span class="caps">${capsIcons(selectedModel.caps)}</span>
+          </span>
         </div>
         <svg class="dropdown-arrow" viewBox="0 0 24 24" width="16" height="16">
           <path fill="currentColor" d="M7 10l5 5 5-5z"/>
         </svg>
       </div>
-      <div class="select-dropdown" role="listbox" aria-label="モデルを選択">
+      <div class="select-dropdown" id="modelDropdown">
+        <div class="dropdown-tabs" role="tablist" aria-label="プランで絞り込み">
+          <button class="plan-tab" role="tab" data-plan="all" aria-selected="true">All</button>
+          <button class="plan-tab" role="tab" data-plan="auto" aria-selected="false">Auto</button>
+          <button class="plan-tab" role="tab" data-plan="free" aria-selected="false">Free</button>
+          <button class="plan-tab" role="tab" data-plan="go" aria-selected="false">Go</button>
+          <button class="plan-tab" role="tab" data-plan="pro" aria-selected="false">Pro</button>
+          <button class="plan-tab" role="tab" data-plan="max" aria-selected="false">Max</button>
+          <button class="plan-tab" role="tab" data-plan="ultra" aria-selected="false">Ultra</button>
+        </div>
         <div class="dropdown-quick">
           <button class="chip small filter-chip" data-filter="all" aria-pressed="true">すべて</button>
           <button class="chip small filter-chip" data-filter="reasoning">🧠 推論</button>
@@ -75,13 +88,18 @@ export function injectModels() {
         </div>
         <div class="dropdown-search">
           <input type="text" placeholder="モデルを検索..." class="search-input" aria-label="モデルを検索">
+          <button class="search-clear" title="クリア" aria-label="検索をクリア">×</button>
           <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16">
             <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
         </div>
-        ${generateFavoritesGroup()}
-        ${generateRecentGroup()}
-        ${generateModelGroups()}
+        <div class="results-meta" aria-live="polite" aria-atomic="true"></div>
+        <div class="model-list" id="modelList" role="listbox" aria-label="モデルを選択">
+          ${generateFavoritesGroup()}
+          ${generateRecentGroup()}
+          ${generateModelGroups()}
+        </div>
+        <div class="empty-results" hidden>該当するモデルがありません</div>
       </div>
     </div>
   `;
@@ -112,8 +130,8 @@ function generateFavoritesGroup() {
   const items = favs.map(id => MODELS.find(m => m.id === id)).filter(Boolean);
   if (!items.length) return '';
   return `
-    <div class="model-group is-favs">
-      <div class="group-header"><span class="group-icon">⭐</span><span class="group-label">Favorites</span><span class="model-count">${items.length}</span></div>
+    <div class="model-group is-favs" role="group" aria-labelledby="group-favs">
+      <div class="group-header" id="group-favs"><span class="group-icon">⭐</span><span class="group-label">Favorites</span><span class="model-count">${items.length}</span></div>
       <div class="model-options">
         ${items.map(m => modelOptionHtml(m)).join('')}
       </div>
@@ -127,8 +145,8 @@ function generateRecentGroup() {
   const items = rec.map(id => MODELS.find(m => m.id === id)).filter(Boolean);
   if (!items.length) return '';
   return `
-    <div class="model-group is-recent">
-      <div class="group-header"><span class="group-icon">🕒</span><span class="group-label">Recent</span><span class="model-count">${items.length}</span></div>
+    <div class="model-group is-recent" role="group" aria-labelledby="group-recent">
+      <div class="group-header" id="group-recent"><span class="group-icon">🕒</span><span class="group-label">Recent</span><span class="model-count">${items.length}</span></div>
       <div class="model-options">
         ${items.map(m => modelOptionHtml(m)).join('')}
       </div>
@@ -151,8 +169,8 @@ function generateModelGroups() {
     if (models.length === 0) return '';
     
     return `
-      <div class="model-group">
-        <div class="group-header">
+      <div class="model-group" role="group" aria-labelledby="group-${group.key}">
+        <div class="group-header" id="group-${group.key}">
           <span class="group-icon">${group.icon}</span>
           <span class="group-label">${group.label}</span>
           <span class="model-count">${models.length}</span>
@@ -192,10 +210,17 @@ export function setupModelSelector() {
   const trigger = customSelect.querySelector('.select-trigger');
   const dropdown = customSelect.querySelector('.select-dropdown');
   const searchInput = customSelect.querySelector('.search-input');
+  const searchClear = customSelect.querySelector('.search-clear');
   const filterChips = customSelect.querySelectorAll('.filter-chip');
+  const planTabs = customSelect.querySelectorAll('.plan-tab');
+  const resultsMeta = customSelect.querySelector('.results-meta');
+  const emptyResults = customSelect.querySelector('.empty-results');
+  const modelList = customSelect.querySelector('.model-list');
   let modelOptions = customSelect.querySelectorAll('.model-option');
-  
+
   let isOpen = false;
+  let currentCapsFilter = (localStorage.getItem('lumora_model_caps_filter') || 'all');
+  let currentPlanFilter = (localStorage.getItem('lumora_model_plan_filter') || 'all');
   
   // Toggle dropdown
   const toggleDropdown = () => {
@@ -203,7 +228,7 @@ export function setupModelSelector() {
     trigger.setAttribute('aria-expanded', isOpen);
     dropdown.classList.toggle('open', isOpen);
     customSelect.classList.toggle('open', isOpen);
-    
+
     if (isOpen) {
       searchInput.focus();
       requestAnimationFrame(() => {
@@ -214,6 +239,15 @@ export function setupModelSelector() {
       });
     }
   };
+
+  // Global shortcut: Ctrl/Cmd + M to toggle
+  document.addEventListener('keydown', (e) => {
+    const key = String(e.key || '').toLowerCase();
+    if ((e.metaKey || e.ctrlKey) && key === 'm') {
+      e.preventDefault();
+      if (isOpen) closeDropdown(); else toggleDropdown();
+    }
+  });
   
   // Close dropdown
   const closeDropdown = () => {
@@ -222,8 +256,7 @@ export function setupModelSelector() {
     trigger.setAttribute('aria-expanded', false);
     dropdown.classList.remove('open');
     customSelect.classList.remove('open');
-    searchInput.value = '';
-    filterModels('');
+    // 検索は残す（次回に活かす）
   };
   
   // Select model
@@ -234,6 +267,10 @@ export function setupModelSelector() {
     // Update UI
     const selectedModel = trigger.querySelector('.selected-model');
     selectedModel.querySelector('.model-name').textContent = model.label;
+    const meta = selectedModel.querySelector('.selected-meta');
+    if (meta) {
+      meta.innerHTML = `<span class="plan-pill" data-plan="${model.plan}">${planLabel(model.plan)}</span><span class="caps">${capsIcons(model.caps)}</span>`;
+    }
     // プランバッジはUIから除去
     
     // Update selected state
@@ -265,13 +302,13 @@ export function setupModelSelector() {
   };
   
   // Filter models based on search
-  let currentCapsFilter = 'all';
   const filterModels = (query) => {
     const groups = dropdown.querySelectorAll('.model-group');
+    let totalVisible = 0;
     groups.forEach(group => {
       const options = group.querySelectorAll('.model-option');
       let visibleCount = 0;
-      
+
       options.forEach(option => {
         const nameEl = option.querySelector('.model-name');
         const raw = nameEl.textContent;
@@ -281,7 +318,8 @@ export function setupModelSelector() {
         const id = option.getAttribute('data-value');
         const m = MODELS.find(x => x.id === id);
         const capsOk = currentCapsFilter === 'all' || (m?.caps || []).includes(currentCapsFilter);
-        const matches = modelName.includes(q) && capsOk;
+        const planOk = currentPlanFilter === 'all' || (m?.plan || 'free') === currentPlanFilter || (currentPlanFilter === 'auto' && m?.plan === 'auto');
+        const matches = modelName.includes(q) && capsOk && planOk;
         option.style.display = matches ? 'flex' : 'none';
         // 簡易ハイライト
         if (q) {
@@ -297,9 +335,19 @@ export function setupModelSelector() {
         }
         if (matches) visibleCount++;
       });
-      
+
       group.style.display = visibleCount > 0 ? 'block' : 'none';
+      totalVisible += visibleCount;
     });
+    // 結果の件数と空表示
+    if (resultsMeta) resultsMeta.textContent = `${totalVisible} 件`;
+    if (emptyResults) emptyResults.hidden = totalVisible !== 0;
+    // 保存
+    try {
+      localStorage.setItem('lumora_model_caps_filter', currentCapsFilter);
+      localStorage.setItem('lumora_model_plan_filter', currentPlanFilter);
+      localStorage.setItem('lumora_model_search', query || '');
+    } catch (_) {}
   };
   
   // Event listeners
@@ -308,19 +356,43 @@ export function setupModelSelector() {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       toggleDropdown();
+      if (isOpen) searchInput.select();
+    }
+    if (e.key === 'ArrowDown' && !isOpen) {
+      e.preventDefault();
+      toggleDropdown();
+      // 最初の表示中オプションへ
+      requestAnimationFrame(() => {
+        const first = Array.from(dropdown.querySelectorAll('.model-option')).find(el => el.style.display !== 'none');
+        if (first) first.focus();
+      });
     }
   });
-  
+
   searchInput.addEventListener('input', (e) => {
     filterModels(e.target.value);
   });
-  
+
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeDropdown();
       trigger.focus();
     }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const first = Array.from(dropdown.querySelectorAll('.model-option')).find(el => el.style.display !== 'none');
+      if (first) first.focus();
+    }
   });
+
+  if (searchClear) {
+    searchClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      searchInput.value = '';
+      filterModels('');
+      searchInput.focus();
+    });
+  }
   
   const bindOptionEvents = () => {
     modelOptions = customSelect.querySelectorAll('.model-option');
@@ -363,6 +435,34 @@ export function setupModelSelector() {
       filterModels(searchInput.value || '');
     });
   });
+
+  // プランタブ
+  planTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      planTabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+      tab.setAttribute('aria-selected', 'true');
+      currentPlanFilter = tab.dataset.plan || 'all';
+      filterModels(searchInput.value || '');
+    });
+    tab.addEventListener('keydown', (e) => {
+      const tabs = Array.from(planTabs);
+      const idx = tabs.indexOf(tab);
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = tabs[(idx + 1) % tabs.length];
+        next.focus();
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+        prev.focus();
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        tab.click();
+      }
+    });
+  });
   
   // Close on outside click
   document.addEventListener('click', (e) => {
@@ -371,11 +471,22 @@ export function setupModelSelector() {
     }
   });
   
-  // Initialize selected state
+  // Initialize selected state & filters
   const saved = localStorage.getItem('lumora_model');
   const initialModel = MODELS.find(x => x.id === coerceToKnownId(saved)) || MODELS[0];
   // 初期選択をUIに反映し、planバッジも更新
   selectModel(initialModel.id);
+  // フィルタの初期適用
+  try {
+    // capability chips
+    filterChips.forEach(c => c.setAttribute('aria-pressed', c.dataset.filter === currentCapsFilter ? 'true' : 'false'));
+    // plan tabs
+    planTabs.forEach(t => t.setAttribute('aria-selected', t.dataset.plan === currentPlanFilter ? 'true' : (currentPlanFilter === 'all' && t.dataset.plan === 'all' ? 'true' : 'false')));
+    // search
+    const savedQuery = localStorage.getItem('lumora_model_search') || '';
+    if (savedQuery) searchInput.value = savedQuery;
+  } catch (_) {}
+  filterModels(searchInput.value || '');
   try { updateAchievementsUi(); } catch (_) {}
 
   // Keyboard navigation inside dropdown
@@ -396,7 +507,7 @@ export function setupModelSelector() {
     if (target) { target.focus(); target.scrollIntoView({ block: 'nearest' }); }
   };
 
-  dropdown.addEventListener('keydown', (e) => {
+  (modelList || dropdown).addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus('next'); }
     if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus('prev'); }
     if (e.key === 'Home') { e.preventDefault(); moveFocus('home'); }
@@ -408,6 +519,19 @@ export function setupModelSelector() {
         selectModel(focused.dataset.value);
       }
     }
+  });
+
+  // Focus trap inside dropdown
+  const getFocusable = () => Array.from(dropdown.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+  dropdown.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || !isOpen) return;
+    const focusables = getFocusable();
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
   });
 }
 
@@ -427,6 +551,11 @@ export function getSelectedModelLabel() {
 export function labelFor(id) {
   const hit = MODELS.find(m => m.id === id);
   return hit ? hit.label : null;
+}
+
+// プロジェクト設定等から参照できるよう、UIモデル一覧をエクスポート
+export function allUiModels() {
+  return MODELS.map(m => ({ label: m.label, id: m.id, plan: m.plan, caps: Array.isArray(m.caps) ? m.caps.slice() : [] }));
 }
 
 // 旧バージョンの保存形式（ラベルや簡易ID）を最新の provider/model-id に変換
@@ -552,5 +681,3 @@ function spawnConfetti(anchor) {
   anchor.appendChild(root);
   setTimeout(() => root.remove(), 1200);
 }
-
-

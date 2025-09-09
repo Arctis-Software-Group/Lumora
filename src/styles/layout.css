@@ -5,9 +5,10 @@
 }
 
 .sidebar {
-  border-right: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-  background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.5));
+  border-right: 1px solid var(--separator);
+  backdrop-filter: saturate(180%) blur(var(--blur-sm));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur-sm));
+  background: var(--ios-group);
   padding: 12px;
   overflow: hidden;
   display: flex;
@@ -38,6 +39,13 @@ html[data-newui="on"] .container.sidebar-collapsed .sidebar .chat-list .item {
 html[data-newui="on"] .container.sidebar-collapsed .sidebar .chat-list .item:hover {
   background: rgba(255,255,255,0.65);
 }
+/* Simple Mode: サイドバー折りたたみ（新UI同等の挙動） */
+html[data-simple="on"] .container.sidebar-collapsed .sidebar { width: 64px; padding: 12px 8px; }
+html[data-simple="on"] .container.sidebar-collapsed .sidebar .search-box,
+html[data-simple="on"] .container.sidebar-collapsed .sidebar .grow,
+html[data-simple="on"] .container.sidebar-collapsed .sidebar .meta { display: none; }
+html[data-simple="on"] .container.sidebar-collapsed .sidebar .chat-list .item { justify-content: center; transform: none !important; }
+html[data-simple="on"] .container.sidebar-collapsed .sidebar .chat-list .item .icon-btn { margin: 0 auto; }
 /* ツールチップ: タイトルをホバーで表示 */
 html[data-newui="on"] .container.sidebar-collapsed .sidebar .chat-list .item {
   position: relative;
@@ -71,21 +79,24 @@ html[data-newui="on"] .container.sidebar-collapsed #newChatBtn { display: none; 
 .search-box input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-2);
-  background: var(--surface-strong);
+  background: var(--ios-card);
 }
-.chat-list { overflow: auto; padding-right: 6px; }
+.chat-list { overflow: auto; padding-right: 6px; background: var(--ios-card); border: 1px solid var(--separator-weak); border-radius: var(--radius-3); padding: 6px; box-shadow: var(--shadow-sm); }
 .cl-group-header { font-size: 12px; font-weight: 700; opacity: .65; padding: 10px 8px 4px; letter-spacing: .4px; text-transform: uppercase; }
 .chat-list .item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px;
   border-radius: var(--radius-2);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--dur) var(--ease-smooth), background var(--dur) var(--ease-smooth);
   position: relative;
   overflow: hidden;
 }
+.chat-list .item + .item { border-top: 1px solid var(--separator-weak); border-radius: 0; }
+html[data-density="compact"] .chat-list .item { padding: 8px; gap: 8px; }
+html[data-density="compact"] .sidebar { padding: 10px; }
 
 .chat-list .item::before {
   content: '';
@@ -99,20 +110,30 @@ html[data-newui="on"] .container.sidebar-collapsed #newChatBtn { display: none; 
   transition: transform 0.2s ease;
 }
 
-.chat-list .item:hover { 
-  background: rgba(255,255,255,0.8); 
-  transform: translateX(4px);
-}
+.chat-list .item:hover { background: rgba(255,255,255,0.8); transform: none; }
 
 .chat-list .item:hover::before {
   transform: scaleY(1);
 }
 
-.chat-list .item.active { 
-  outline: 2px solid rgba(100, 100, 255, 0.35); 
-  background: white;
-  transform: translateX(4px);
+.chat-list .item.active { outline: 2px solid rgba(10,132,255,0.35); background: white; transform: none; }
+
+/* ===== Simple Mode: sidebar + list styling ===== */
+html[data-simple="on"] .sidebar {
+  background: #111419;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: none;
 }
+html[data-simple="on"] .search-box input,
+html[data-simple="on"] .chat-list .item,
+html[data-simple="on"] .primary-btn,
+html[data-simple="on"] .icon-btn {
+  background: #1a1f26;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+html[data-simple="on"] .chat-list .item:hover { background: #1f2430; transform: none; }
+html[data-simple="on"] .chat-list .item.active { background: #222736; outline-color: rgba(124,58,237,0.5); transform: none; }
 
 .chat-list .item.active::before {
   transform: scaleY(1);
@@ -177,16 +198,18 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
 }
 .composer {
   display: flex; gap: 12px; align-items: flex-end;
-  border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.75));
-  backdrop-filter: blur(12px);
-  padding: 12px;
+  border-top: 1px solid var(--separator);
+  background: var(--ios-group);
+  backdrop-filter: saturate(180%) blur(var(--blur-sm));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur-sm));
+  padding: 12px 12px calc(12px + var(--safe-bottom));
 }
+html[data-density="compact"] .composer { gap: 8px; }
 .composer textarea {
   flex: 1;
   resize: none;
-  border: 1px solid var(--border);
-  background: var(--surface-strong);
+  border: 1px solid var(--separator);
+  background: var(--ios-card);
   border-radius: var(--radius-2);
   padding: 12px 14px;
   line-height: 1.5;
@@ -233,15 +256,15 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
   width: min(760px, 88%);
   padding: 8px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid var(--border);
+  background: var(--ios-card);
+  border: 1px solid var(--separator);
   box-shadow: 0 12px 40px rgba(30,30,60,0.15);
   backdrop-filter: blur(12px);
   position: relative; /* 添付プレビューを重ねるための基準 */
 }
 .hero-input:focus-within {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(107,107,255,0.1), 0 16px 48px rgba(30,30,60,0.22);
+  box-shadow: 0 0 0 3px rgba(107,107,255,0.1), 0 16px 48px rgba(30,30,60,0.18);
   transform: translateY(-1px);
 }
 .attach-preview {
@@ -299,8 +322,8 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
 
 .hero-input .sb-btn {
   appearance: none;
-  border: 1px solid var(--border);
-  background: var(--surface-strong);
+  border: 1px solid var(--separator);
+  background: var(--ios-card);
   border-radius: 12px;
   width: 44px; height: 44px;
   cursor: pointer;
@@ -311,8 +334,8 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
 
 .hero-input .sb-icon {
   appearance: none;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--separator);
+  background: var(--ios-card);
   border-radius: 10px;
   width: 40px; height: 40px;
   display: grid; place-items: center;
@@ -332,6 +355,16 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
   transition: transform .15s ease;
 }
 .hero-input .sb-send:hover { transform: translateY(-1px); }
+
+/* Simple Mode hero: flatter search bar */
+html[data-simple="on"] .empty-state { padding-top: 18vh; }
+html[data-simple="on"] .empty-state h1 { color: #e5e7eb; -webkit-text-fill-color: unset; background: none; font-weight: 800; }
+html[data-simple="on"] .empty-state p { display: none; }
+html[data-simple="on"] .hero-input { background: #1a1f26; border: 1px solid rgba(255,255,255,0.08); box-shadow: none; backdrop-filter: none; }
+html[data-simple="on"] .hero-input:focus-within { box-shadow: 0 0 0 2px rgba(124,58,237,0.25); border-color: rgba(124,58,237,0.5); transform: none; }
+html[data-simple="on"] .hero-input .sb-btn,
+html[data-simple="on"] .hero-input .sb-icon { background: #1f2430; border-color: rgba(255,255,255,0.08); box-shadow: none; }
+html[data-simple="on"] .hero-input .sb-send { box-shadow: none; }
 
 /* モデルセクション（サイドバー内） */
 /* サイドバーのモデルセクションはトップバー移設のため削除 */
@@ -353,6 +386,7 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
   align-items: center;
   gap: 10px;
 }
+html[data-density="compact"] .user-profile { gap: 8px; }
 .avatar-wrap { position: relative; width: 32px; height: 32px; }
 .avatar-wrap img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); display: none; }
 .avatar-fallback { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(120deg, var(--brand), var(--accent)); color: #fff; font-weight: 700; }
@@ -365,7 +399,7 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
   flex-direction: column;
   align-items: center;
 }
-.messages > * { width: min(780px, 92%); }
+.messages > * { width: min(var(--message-width, 780px), 92%); }
 .messages.dragover::after {
   content: 'ファイルをドロップして添付';
   position: fixed;

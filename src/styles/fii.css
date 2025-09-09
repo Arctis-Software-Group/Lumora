@@ -1,0 +1,178 @@
+/* Fluid Intelligence Interface (FII) — Nonlinear graph UI */
+
+/* Root toggle: when ON, hide the traditional chat container and show FII */
+html[data-fii="on"] .container { display: none !important; }
+
+.fii-node.appear { animation: fii-appear .28s ease-out both; }
+@keyframes fii-appear {
+  0% { opacity: 0; filter: saturate(0.96) blur(2px); }
+  100% { opacity: 1; filter: saturate(1) blur(0); }
+}
+html[data-fii="on"] .legal { display: none !important; }
+html[data-fii="on"] #fiiRoot { display: block; }
+html[data-fii="on"] #modelSelectorContainer { display: none !important; }
+
+/* FII Root Layer */
+.fii-root {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0; right: 0; bottom: 0;
+  z-index: 26; /* above app chrome, below modal (50) */
+  display: none;
+}
+
+/* Subtle atmospheric backdrop */
+.fii-root::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(60% 50% at 64% 12%, rgba(107,107,255,0.15), transparent 60%),
+    radial-gradient(50% 40% at 24% 70%, rgba(159,84,255,0.12), transparent 60%),
+    radial-gradient(30% 30% at 80% 80%, rgba(255,255,255,0.06), transparent 60%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+/* Background canvas for edges and light flows */
+.fii-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Node container */
+.fii-nodes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Floating input trigger (orb) */
+.fii-input-orb {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  width: 68px; height: 68px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  color: white;
+  font-weight: 800;
+  font-size: 22px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+  background:
+    radial-gradient(120% 140% at 50% -20%, rgba(159,84,255,0.35), transparent),
+    radial-gradient(120% 140% at 50% 140%, rgba(107,107,255,0.35), transparent),
+    linear-gradient(135deg, rgba(26,26,48,0.8), rgba(18,18,30,0.85));
+  box-shadow: 0 12px 36px rgba(107,107,255,0.35), inset 0 0 24px rgba(159,84,255,0.25);
+  transition: transform .25s var(--ease-smooth), box-shadow .25s var(--ease-smooth);
+  animation: orb-breathe 3.2s ease-in-out infinite;
+}
+.fii-input-orb:hover { transform: translate(-50%, -50%) scale(1.06); box-shadow: 0 20px 50px rgba(107,107,255,0.45), inset 0 0 28px rgba(159,84,255,0.35); }
+
+@keyframes orb-breathe {
+  0% { box-shadow: 0 12px 36px rgba(107,107,255,0.30), inset 0 0 22px rgba(159,84,255,0.22); }
+  50% { box-shadow: 0 16px 46px rgba(107,107,255,0.45), inset 0 0 30px rgba(159,84,255,0.34); }
+  100% { box-shadow: 0 12px 36px rgba(107,107,255,0.30), inset 0 0 22px rgba(159,84,255,0.22); }
+}
+
+/* Input panel */
+.fii-input-panel {
+  position: absolute;
+  left: 50%; top: calc(42% + 58px);
+  transform: translateX(-50%);
+  width: min(680px, 88vw);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-ultra);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  display: none;
+}
+html[data-theme="dark"] .fii-input-panel { background: rgba(18,18,30,0.96); }
+
+.fii-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.fii-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-2); padding: 12px 14px; background: var(--surface-strong); color: var(--text-1); font-size: 15px; }
+.fii-input:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--focus-border); }
+.fii-send { appearance: none; border: none; border-radius: var(--radius-2); padding: 10px 16px; background: var(--grad-brand); color: white; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); }
+
+/* Mind Palette (top-right) */
+.fii-palette {
+  position: absolute; right: 14px; top: 14px;
+  min-width: 280px; max-width: 40vw;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-strong);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35), inset 0 0 24px rgba(255,255,255,0.03);
+  padding: 10px;
+  backdrop-filter: saturate(1.2) blur(8px);
+  -webkit-backdrop-filter: saturate(1.2) blur(8px);
+}
+.fii-palette .title { font-size: 12px; letter-spacing: .3px; text-transform: uppercase; opacity: .7; margin-bottom: 6px; }
+.fii-palette .group { display: grid; gap: 8px; margin-bottom: 8px; }
+.fii-palette .models { display: flex; flex-wrap: wrap; gap: 6px; }
+.fii-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 12px; }
+.fii-chip input { accent-color: var(--brand); }
+.fii-palette .row { display: flex; align-items: center; gap: 8px; }
+.fii-mini { font-size: 12px; opacity: .8; }
+.fii-gear { margin-left: auto; appearance: none; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
+
+/* Prompt Chain (bottom center) */
+.fii-chain {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  padding: 8px 10px;
+  border-radius: var(--radius-3);
+  background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.18));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.fii-chain .pc-chip { font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+
+/* Graph node */
+.fii-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: max(160px, min(28vw, 320px));
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));
+  box-shadow: 0 18px 50px rgba(30,30,60,0.14), 0 6px 16px rgba(30,30,60,0.12), inset 0 0 24px rgba(255,255,255,0.06);
+  overflow: hidden;
+  opacity: 0;
+}
+html[data-theme="dark"] .fii-node { background: rgba(16,16,28,0.9); box-shadow: 0 18px 50px rgba(0,0,0,0.5), 0 6px 16px rgba(0,0,0,0.45); }
+
+.fii-node .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 12px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, rgba(248,249,255,0.7), rgba(255,255,255,0.5)); }
+.fii-node .head .dot { width: 8px; height: 8px; border-radius: 999px; background: linear-gradient(135deg, var(--brand), var(--accent)); box-shadow: 0 0 12px rgba(107,107,255,0.6); }
+.fii-node.user .head .dot { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 0 10px rgba(16,163,74,0.5); }
+.fii-node .head .meta { margin-left: auto; opacity: .7; }
+
+.fii-node .body { padding: 10px 12px; max-height: 320px; overflow: auto; }
+.fii-node .body .markdown { font-size: 14px; line-height: 1.6; }
+
+/* Light aura behind nodes */
+.fii-node::before {
+  content: '';
+  position: absolute; inset: -20px;
+  border-radius: inherit;
+  background:
+    radial-gradient(60% 60% at 20% 10%, rgba(159,84,255,0.25), transparent),
+    radial-gradient(58% 58% at 72% 12%, rgba(107,107,255,0.25), transparent);
+  filter: blur(16px);
+  z-index: -1;
+}
+.fii-node.user::before {
+  background:
+    radial-gradient(60% 60% at 20% 10%, rgba(34,197,94,0.22), transparent),
+    radial-gradient(58% 58% at 72% 12%, rgba(16,163,74,0.22), transparent);
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+  .fii-input-panel { width: min(92vw, 560px); }
+  .fii-node { width: min(88vw, 360px); }
+}

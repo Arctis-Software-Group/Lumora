@@ -3,12 +3,14 @@ import { renderSidebar } from '../ui/sidebar.js';
 import { renderChatList } from '../ui/chat-list.js';
 import { renderComposer } from '../ui/composer.js';
 import { renderMessageBubble, scrollToBottom, showTyping } from '../ui/message-bubble.js';
-import { setupModelSelector, getSelectedModel, getSelectedModelLabel, injectModels, updateAchievementsUi } from '../ui/model-selector.js';
+import { setupModelSelector, getSelectedModel, getSelectedModelLabel, injectModels, updateAchievementsUi, labelFor } from '../ui/model-selector.js';
 import { showToast } from '../ui/toast.js';
 import { sendMessageStream } from '../api/chat.js';
 import { buildFinalSystemPrompt, inferEmotionFromText } from '../safety/safety.js';
 import { openSettings, setupSettings } from './settings.js';
 import { estimateConfidence } from '../lib/trust.js';
+import { loadProjects } from './projects.js';
+import { enableFII } from './fii.js';
 
 const state = initState();
 window.__lumora_state = state;
@@ -323,8 +325,16 @@ export function appendAndSend(text) {
   state.append(state.currentChatId, { role: 'user', content: text, createdAt: now.getTime() });
   appendMessage('user', text, { createdAt: now });
 
-  const modelId = getSelectedModel();
-  const modelLabel = getSelectedModelLabel();
+  // プロジェクト既定のモデルを優先（設定があれば）
+  let modelId = getSelectedModel();
+  try {
+    const projName = (state.chats[state.currentChatId]?.project || '').trim();
+    if (projName) {
+      const proj = loadProjects()[projName];
+      if (proj && proj.modelId) modelId = proj.modelId;
+    }
+  } catch (_) {}
+  const modelLabel = labelFor(modelId) || getSelectedModelLabel();
   const { node: aiNode } = appendMessage('assistant', '', { model: modelLabel, createdAt: new Date() });
   // Auto ルーティング時にサーバから通知される実モデルで上書き
   let resolvedModelLabel = modelLabel;
@@ -339,14 +349,25 @@ export function appendAndSend(text) {
   const enhancedMessages = [...messages];
   // ===== System Prompt Edit + Emotion Guard (client-side) =====
   try {
-    const userPrompt = localStorage.getItem('lumora_system_prompt') || '';
-    const mode = localStorage.getItem('lumora_emotion_mode') || 'off';
+    const userPromptGlobal = localStorage.getItem('lumora_system_prompt') || '';
+    // プロジェクト固有の上書き
+    let projectPrompt = '';
+    let mode = localStorage.getItem('lumora_emotion_mode') || 'off';
+    let manualStyle = localStorage.getItem('lumora_emotion_style') || 'neutral';
+    try {
+      const projName = (state.chats[state.currentChatId]?.project || '').trim();
+      if (projName) {
+        const proj = loadProjects()[projName];
+        if (proj) {
+          if (proj.systemPrompt) projectPrompt = proj.systemPrompt;
+          if (proj.emotionMode) mode = proj.emotionMode;
+          if (proj.emotionStyle) manualStyle = proj.emotionStyle;
+        }
+      }
+    } catch (_) {}
     let tone = null;
-    if (mode === 'manual') {
-      tone = localStorage.getItem('lumora_emotion_style') || 'neutral';
-    } else if (mode === 'auto') {
-      tone = inferEmotionFromText(String(text || '')) || 'neutral';
-    }
+    if (mode === 'manual') tone = manualStyle || 'neutral';
+    else if (mode === 'auto') tone = inferEmotionFromText(String(text || '')) || 'neutral';
     // Reflect in header badge
     try {
       const badge = document.getElementById('toneBadge');
@@ -365,8 +386,9 @@ export function appendAndSend(text) {
         document.documentElement.dataset.emotion = (mode === 'off') ? 'neutral' : (tone || 'neutral');
       }
     } catch (_) {}
-    if ((userPrompt && userPrompt.trim()) || tone) {
-      const finalSp = buildFinalSystemPrompt(userPrompt, { tone: tone || 'neutral', allowSensitive: true });
+    const mergedPrompt = [userPromptGlobal, projectPrompt].filter(s => String(s || '').trim()).join('\n\n');
+    if ((mergedPrompt && mergedPrompt.trim()) || tone) {
+      const finalSp = buildFinalSystemPrompt(mergedPrompt, { tone: tone || 'neutral', allowSensitive: true });
       enhancedMessages.unshift({ role: 'system', content: finalSp });
     }
   } catch (e) {
@@ -635,10 +657,25 @@ function init() {
     const glass = localStorage.getItem('lumora_glass') || 'off';
     document.documentElement.dataset.glass = glass;
   } catch (_) {}
+  // Density & Contrast
+  try {
+    const d = localStorage.getItem('lumora_density') || 'comfortable';
+    document.documentElement.dataset.density = (d === 'compact') ? 'compact' : 'comfortable';
+  } catch (_) {}
+  try {
+    const c = localStorage.getItem('lumora_contrast') || 'off';
+    document.documentElement.dataset.contrast = (c === 'on') ? 'high' : 'normal';
+  } catch (_) {}
+  // FII (Fluid Intelligence Interface) — default OFF, load persisted state
+  try {
+    const fii = localStorage.getItem('lumora_fii') || 'off';
+    enableFII(fii === 'on');
+  } catch (_) {}
   setupScrollBottom();
   setupScrollShadows();
   setupTopbarShadow();
   setupShortcuts();
+  setupCommandPalette();
   setupBookmarkBubble();
   // Quick focus on composer for faster start
   try { document.getElementById('input')?.focus(); } catch (_) {}
@@ -784,13 +821,112 @@ function setupTopbarShadow() {
   apply();
 }
 
+// ===== Command Palette (Cmd/Ctrl + K) =====
+function setupCommandPalette() {
+  const overlay = document.createElement('div');
+  overlay.className = 'cmdk-overlay';
+  overlay.innerHTML = `
+    <div class="cmdk" role="dialog" aria-modal="true" aria-label="コマンドパレット">
+      <div class="cmdk-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input id="cmdkInput" class="cmdk-input" type="search" placeholder="コマンドやチャットを検索…" aria-label="検索" />
+      </div>
+      <div class="cmdk-body">
+        <div class="cmdk-section">Commands</div>
+        <div id="cmdkCommands"></div>
+        <div class="cmdk-section">Chats</div>
+        <div id="cmdkChats"></div>
+        <div id="cmdkEmpty" class="cmdk-empty" hidden>一致する項目がありません</div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector('#cmdkInput');
+  const listCmd = overlay.querySelector('#cmdkCommands');
+  const listChats = overlay.querySelector('#cmdkChats');
+  const empty = overlay.querySelector('#cmdkEmpty');
+  let open = false;
+
+  const commands = [
+    { id: 'new', label: '新しいチャット', hint: '⌘N', run: () => { const id = state.createChat({ title: '新しいチャット' }); state.selectChat(id); renderChatList(state); showToast('新しいチャットを作成'); location.reload(); } },
+    { id: 'settings', label: '設定を開く', hint: '⌘,', run: () => openSettings() },
+    { id: 'theme', label: 'テーマを切り替え（ライト/ダーク）', hint: '', run: () => { const cur = (localStorage.getItem('lumora_theme') || 'system'); const next = cur === 'dark' ? 'light' : 'dark'; localStorage.setItem('lumora_theme', next); const sel = document.getElementById('themeSelect'); if (sel) { sel.value = next; sel.dispatchEvent(new Event('change')); } else { document.documentElement.dataset.theme = next; } showToast(`テーマ: ${next}`); } },
+    { id: 'sidebar', label: 'サイドバーの表示/非表示', hint: '⌘B', run: () => { try { document.getElementById('toggleSidebarBtn')?.click(); } catch(_){} } },
+    { id: 'model', label: 'モデルセレクタを開く', hint: '⌘M', run: () => { const trig = document.querySelector('#customModelSelect .select-trigger'); trig?.click(); } },
+    { id: 'focus', label: '入力欄にフォーカス', hint: '⌘J', run: () => { document.getElementById('input')?.focus(); } },
+  ];
+
+  function render() {
+    const q = (input.value || '').toLowerCase();
+    // Commands
+    listCmd.innerHTML = '';
+    const cmdMatches = commands.filter(c => c.label.toLowerCase().includes(q));
+    for (const c of cmdMatches) {
+      const el = document.createElement('div');
+      el.className = 'cmdk-item';
+      el.setAttribute('role', 'button');
+      el.tabIndex = 0;
+      el.innerHTML = `<span>${escapeHtml(c.label)}</span>${c.hint ? `<span class="k">${c.hint}</span>` : ''}`;
+      el.addEventListener('click', () => { close(); requestAnimationFrame(() => c.run()); });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); close(); c.run(); } });
+      listCmd.appendChild(el);
+    }
+    // Chats
+    listChats.innerHTML = '';
+    const ids = state.order.slice();
+    const matches = [];
+    for (const id of ids) {
+      const chat = state.chats[id]; if (!chat) continue;
+      const title = String(chat.title || '');
+      if (!q || title.toLowerCase().includes(q)) { matches.push({ id, title, fav: chat.favorite === true }); }
+      if (matches.length >= 30) break;
+    }
+    for (const m of matches) {
+      const el = document.createElement('div');
+      el.className = 'cmdk-item';
+      el.setAttribute('role', 'button');
+      el.tabIndex = 0;
+      el.innerHTML = `<span>${m.fav ? '⭐ ' : ''}${escapeHtml(m.title)}</span>`;
+      el.addEventListener('click', () => { close(); state.selectChat(m.id); renderChatList(state); location.reload(); });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); close(); state.selectChat(m.id); renderChatList(state); location.reload(); } });
+      listChats.appendChild(el);
+    }
+    const hasAny = cmdMatches.length + matches.length > 0;
+    empty.hidden = hasAny;
+  }
+
+  function openPalette() {
+    if (open) return;
+    open = true;
+    overlay.classList.add('open');
+    render();
+    setTimeout(() => input.focus(), 0);
+  }
+  function close() {
+    if (!open) return;
+    open = false;
+    overlay.classList.remove('open');
+    input.value = '';
+  }
+  input.addEventListener('input', render);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', (e) => {
+    const inField = /input|textarea|select/i.test((e.target?.tagName) || '') || (e.target?.isContentEditable);
+    const key = (e.key || '').toLowerCase();
+    if ((e.metaKey || e.ctrlKey) && key === 'k') { e.preventDefault(); if (open) close(); else openPalette(); }
+    if (key === 'escape' && open) { e.preventDefault(); close(); }
+  });
+}
+
 function setupShortcuts() {
   document.addEventListener('keydown', (e) => {
     const isMac = navigator.platform.toLowerCase().includes('mac');
     const mod = isMac ? e.metaKey : e.ctrlKey;
-    if (mod && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      document.getElementById('chatSearch')?.focus();
+    // Search chats
+    if (mod && e.key.toLowerCase() === 'f') {
+      const t = (e.target || {});
+      const inField = /input|textarea|select/i.test((t.tagName) || '') || t.isContentEditable;
+      if (!inField) { e.preventDefault(); document.getElementById('chatSearch')?.focus(); }
     }
     if (mod && e.key.toLowerCase() === 'j') {
       e.preventDefault();
@@ -799,6 +935,21 @@ function setupShortcuts() {
     if (mod && e.key.toLowerCase() === 'enter') {
       const el = document.getElementById('sendBtn');
       if (el) { e.preventDefault(); el.click(); }
+    }
+    // New chat
+    if (mod && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      try {
+        const id = state.createChat({ title: '新しいチャット' });
+        state.selectChat(id);
+        renderChatList(state);
+        location.reload();
+      } catch (_) {}
+    }
+    // Toggle sidebar
+    if (mod && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      try { document.getElementById('toggleSidebarBtn')?.click(); } catch (_) {}
     }
     if (e.key === 'Escape') {
       const active = document.activeElement;
@@ -997,3 +1148,11 @@ window.addEventListener('storage', (e) => {
     try { syncUserProfileFromStorage(); } catch (_) {}
   }
 });
+
+// Utilities
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
