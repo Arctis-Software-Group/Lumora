@@ -14,6 +14,7 @@ export function renderChatList(s) {
   list.innerHTML = '';
   const q = (document.getElementById('chatSearch')?.value || '').toLowerCase();
   const groupMode = localStorage.getItem('lumora_chat_group') || 'none'; // none | project
+  const projectFilter = (localStorage.getItem('lumora_chat_project_filter') || '').trim();
   // 並び: お気に入り優先 → 作成日時降順（order）
   const ids = st.order.slice();
   ids.sort((a,b) => (st.chats[b]?.favorite === true) - (st.chats[a]?.favorite === true));
@@ -23,6 +24,7 @@ export function renderChatList(s) {
     for (const id of ids) {
       const chat = st.chats[id];
       if (!chat) continue;
+      if (projectFilter && (String(chat.project||'').trim() !== projectFilter)) continue;
       if (q && !chat.title.toLowerCase().includes(q)) continue;
       const key = (chat.project || '').trim() || '（未分類）';
       if (!groups.has(key)) groups.set(key, []);
@@ -36,11 +38,23 @@ export function renderChatList(s) {
       for (const id of idsIn) list.appendChild(renderItem(st, id));
     }
   } else {
+    // お気に入りを上部にグループ表示（検索中は混在のまま）
+    const favs = [];
+    const rest = [];
     for (const id of ids) {
       const chat = st.chats[id];
       if (!chat) continue;
+      if (projectFilter && (String(chat.project||'').trim() !== projectFilter)) continue;
       if (q && !chat.title.toLowerCase().includes(q)) continue;
-      list.appendChild(renderItem(st, id));
+      (chat.favorite === true ? favs : rest).push(id);
+    }
+    if (favs.length && !q) {
+      const h = document.createElement('div'); h.className = 'cl-group-header'; h.textContent = 'Favorites'; list.appendChild(h);
+      favs.forEach(id => list.appendChild(renderItem(st, id)));
+      const h2 = document.createElement('div'); h2.className = 'cl-group-header'; h2.textContent = 'All'; list.appendChild(h2);
+      rest.forEach(id => list.appendChild(renderItem(st, id)));
+    } else {
+      [...favs, ...rest].forEach(id => list.appendChild(renderItem(st, id)));
     }
   }
   const search = document.getElementById('chatSearch');

@@ -28,7 +28,7 @@
   gap: 6px;
   opacity: 0;
   transform: translateY(-4px);
-  transition: all .18s ease;
+  transition: all var(--dur) var(--ease-smooth);
 }
 .bubble-main:hover .actions { opacity: 1; transform: translateY(0); }
 .action-btn {
@@ -38,6 +38,7 @@
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
+  transition: background var(--dur) var(--ease-smooth), border-color var(--dur) var(--ease-smooth), transform var(--dur-fast) var(--ease-smooth);
 }
 .action-btn:hover { background: white; }
 
@@ -64,6 +65,7 @@ html[data-newui="on"] .action-btn:focus { box-shadow: var(--focus-ring); outline
   padding: 8px 12px;
   background: linear-gradient(135deg, rgba(248,249,255,0.8), rgba(255,255,255,0.6));
   border-bottom: 1px solid var(--border);
+  transition: background var(--dur) var(--ease-smooth), border-color var(--dur) var(--ease-smooth);
 }
 .code-lang { font-size: 12px; font-weight: 700; opacity: .7; }
 .code-copy {
@@ -74,6 +76,7 @@ html[data-newui="on"] .action-btn:focus { box-shadow: var(--focus-ring); outline
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
+  transition: background var(--dur) var(--ease-smooth), border-color var(--dur) var(--ease-smooth), transform var(--dur-fast) var(--ease-smooth);
 }
 .code-copy:hover { background: white; }
 

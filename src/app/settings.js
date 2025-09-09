@@ -1,6 +1,8 @@
 import { renderChatList } from '../ui/chat-list.js';
 import { showToast } from '../ui/toast.js';
 import { validateSystemPromptForSave } from '../safety/safety.js';
+import { attachProjectsSettings } from './projects.js';
+import { enableFII } from './fii.js';
 
 export function setupSettings(state) {
   const btn = document.getElementById('settingsBtn');
@@ -11,7 +13,11 @@ export function setupSettings(state) {
   const range = document.getElementById('widthRange');
   const valueLabel = document.getElementById('widthValue');
   const themeSel = document.getElementById('themeSelect');
+  const densitySel = document.getElementById('densitySelect');
+  const contrastToggle = document.getElementById('contrastToggle');
+  const simpleModeToggle = document.getElementById('simpleModeToggle');
   const newUiToggle = document.getElementById('newUiToggle');
+  const fiiToggle = document.getElementById('fiiToggle');
   const asobiToggle = document.getElementById('asobiToggle');
   const glassToggle = document.getElementById('glassToggle');
   // Labs (Beta/Alpha/Research)
@@ -55,6 +61,8 @@ export function setupSettings(state) {
   themeSel.value = localStorage.getItem('lumora_theme') || 'system';
   const newUi = localStorage.getItem('lumora_newui') || 'off';
   if (newUiToggle) newUiToggle.checked = newUi === 'on';
+  const fii = localStorage.getItem('lumora_fii') || 'off';
+  if (fiiToggle) fiiToggle.checked = fii === 'on';
   const asobi = localStorage.getItem('lumora_asobi') || 'off';
   if (asobiToggle) asobiToggle.checked = asobi === 'on';
   const glass = localStorage.getItem('lumora_glass') || 'off';
@@ -69,10 +77,23 @@ export function setupSettings(state) {
   }
   applyWidth(parseInt(range.value, 10));
   applyTheme(themeSel.value);
+  // Simple Mode 初期化
+  const simpleMode = localStorage.getItem('lumora_simple') || 'off';
+  if (simpleModeToggle) simpleModeToggle.checked = simpleMode === 'on';
+  applySimple(simpleMode);
+  // Density / Contrast 初期化
+  const savedDensity = localStorage.getItem('lumora_density') || 'comfortable';
+  if (densitySel) densitySel.value = savedDensity;
+  applyDensity(savedDensity);
+  const savedContrast = localStorage.getItem('lumora_contrast') || 'off';
+  if (contrastToggle) contrastToggle.checked = savedContrast === 'on';
+  applyContrast(savedContrast);
   applyNewUi(newUi);
   applyAsobi(asobi);
   applyGlass(glass);
   try { import('../ui/model-selector.js').then(({ updateAchievementsUi }) => updateAchievementsUi()).catch(() => {}); } catch (_) {}
+  // Projects manager UI
+  try { attachProjectsSettings(state); } catch (_) {}
   // Labs initial apply
   try {
     const labsBeta = localStorage.getItem('lumora_labs_beta') || 'off';
@@ -144,6 +165,45 @@ export function setupSettings(state) {
   cancelBtn?.addEventListener('click', close);
   modal?.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
+  // Tabs: Accessible tab switching for settings categories
+  try {
+    const tabList = modal?.querySelector('.settings-tabs');
+    const tabs = tabList ? Array.from(tabList.querySelectorAll('[role="tab"]')) : [];
+    const panels = modal ? Array.from(modal.querySelectorAll('[role="tabpanel"]')) : [];
+    const activate = (panelId) => {
+      if (!panelId) return;
+      tabs.forEach(t => {
+        const sel = t.getAttribute('aria-controls') === panelId;
+        t.setAttribute('aria-selected', sel ? 'true' : 'false');
+        t.classList.toggle('active', sel);
+        t.tabIndex = sel ? 0 : -1;
+      });
+      panels.forEach(p => {
+        const sel = p.id === panelId;
+        if (sel) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+        p.classList.toggle('active', sel);
+      });
+      try { localStorage.setItem('lumora_settings_tab', panelId); } catch (_) {}
+    };
+    tabs.forEach((tab, idx) => {
+      tab.addEventListener('click', () => activate(tab.getAttribute('aria-controls')));
+      tab.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(tab.getAttribute('aria-controls')); }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const dir = e.key === 'ArrowRight' ? 1 : -1;
+          const next = (idx + dir + tabs.length) % tabs.length;
+          tabs[next].focus();
+        }
+      });
+    });
+    // Initialize selected tab
+    let initial = null;
+    try { initial = localStorage.getItem('lumora_settings_tab'); } catch (_) {}
+    if (!initial || !panels.some(p => p.id === initial)) initial = panels[0]?.id || null;
+    if (initial) activate(initial);
+  } catch (_) {}
+
   range.addEventListener('input', () => {
     valueLabel.textContent = range.value;
     applyWidth(parseInt(range.value, 10));
@@ -157,6 +217,22 @@ export function setupSettings(state) {
     const wrapper = themeSel.closest('.custom-select-wrapper');
     wrapper.classList.add('changed');
     setTimeout(() => wrapper.classList.remove('changed'), 300);
+  });
+  densitySel?.addEventListener('change', () => {
+    applyDensity(densitySel.value);
+    const wrapper = densitySel.closest('.custom-select-wrapper');
+    if (wrapper) { wrapper.classList.add('changed'); setTimeout(() => wrapper.classList.remove('changed'), 300); }
+  });
+  contrastToggle?.addEventListener('change', () => {
+    applyContrast(contrastToggle.checked ? 'on' : 'off');
+  });
+  simpleModeToggle?.addEventListener('change', () => {
+    const flag = simpleModeToggle.checked ? 'on' : 'off';
+    applySimple(flag);
+  });
+  fiiToggle?.addEventListener('change', () => {
+    const flag = fiiToggle.checked ? 'on' : 'off';
+    try { enableFII(flag === 'on'); } catch (_) {}
   });
 
   asobiToggle?.addEventListener('change', () => {
@@ -241,9 +317,13 @@ export function setupSettings(state) {
 
       localStorage.setItem('lumora_width', range.value);
       localStorage.setItem('lumora_theme', themeSel.value);
+      localStorage.setItem('lumora_simple', simpleModeToggle?.checked ? 'on' : 'off');
       localStorage.setItem('lumora_newui', newUiToggle?.checked ? 'on' : 'off');
+      localStorage.setItem('lumora_fii', fiiToggle?.checked ? 'on' : 'off');
       localStorage.setItem('lumora_asobi', asobiToggle?.checked ? 'on' : 'off');
       localStorage.setItem('lumora_glass', glassToggle?.checked ? 'on' : 'off');
+      localStorage.setItem('lumora_density', densitySel?.value || 'comfortable');
+      localStorage.setItem('lumora_contrast', contrastToggle?.checked ? 'on' : 'off');
       // Labs save
       localStorage.setItem('lumora_labs_beta', labsBetaToggle?.checked ? 'on' : 'off');
       localStorage.setItem('lumora_labs_alpha', labsAlphaToggle?.checked ? 'on' : 'off');
@@ -365,6 +445,10 @@ function applyWidth(px) {
   if (el) el.style.width = `min(${px}px, 88%)`;
   const messages = document.getElementById('messages');
   if (messages) messages.style.maxWidth = `${px + 120}px`;
+  try {
+    // Expose as a CSS variable for consistent layout centering
+    document.documentElement.style.setProperty('--message-width', `${px}px`);
+  } catch (_) {}
 }
 
 function applyTheme(mode) {
@@ -382,6 +466,28 @@ function applyTheme(mode) {
     applyTheme._mql = mql;
     applyTheme._listener = sync;
   }
+}
+
+function applyDensity(mode) {
+  const root = document.documentElement;
+  root.dataset.density = (mode === 'compact') ? 'compact' : 'comfortable';
+}
+
+function applyContrast(flag) {
+  const root = document.documentElement;
+  root.dataset.contrast = flag === 'on' ? 'high' : 'normal';
+}
+
+function applySimple(flag) {
+  const root = document.documentElement;
+  const on = flag === 'on' ? 'on' : 'off';
+  root.dataset.simple = on;
+  try {
+    const h = document.querySelector('#emptyState h1');
+    if (h) h.textContent = on === 'on' ? '今日は何をしましょうか？' : "Hello I’m Lumora.";
+    const p = document.querySelector('#emptyState p');
+    if (p) p.textContent = on === 'on' ? '' : 'Is there anything I can help you with?';
+  } catch (_) {}
 }
 
 function applyNewUi(flag) {

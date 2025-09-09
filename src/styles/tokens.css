@@ -1,38 +1,68 @@
 :root {
   /* ===== カラー（ベース/テキスト） ===== */
-  --bg-app: #f8f9ff;           /* アプリ背景 */
-  --bg-0: #0b0b0c;             /* レガシー互換 */
-  --text-0: #0b1020;           /* 見出し/強調 */
-  --text-1: #0e1327;           /* 本文 */
-  --text-muted: #6b7280;       /* 補助テキスト */
+  /* iOS-like neutral and background palette */
+  --bg-app: #f2f2f7;           /* iOS group background */
+  --bg-0: #0b0b0c;
+  --text-0: #0b1020;
+  --text-1: #0e1327;
+  --text-muted: #6b7280;
+  --separator: rgba(60,60,67,0.29); /* iOS hairline default */
+  --separator-weak: rgba(60,60,67,0.18);
+  /* Neutral scale for separators/surfaces */
+  --neutral-50: #f7f8fa;
+  --neutral-100: #eef1f6;
+  --neutral-200: #e6e9ef;
+  --neutral-300: #d9dee7;
+  --neutral-400: #c5ccda;
+  --neutral-500: #9aa1b2;
 
-  /* ===== サーフェス階調 ===== */
+  /* ===== サーフェス階調（ガラス基調） ===== */
   --surface-weak: rgba(255, 255, 255, 0.35);
-  --surface: rgba(255, 255, 255, 0.6);
-  --surface-strong: rgba(255, 255, 255, 0.9);
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.92);
   --surface-ultra: rgba(255, 255, 255, 0.98);
+  --ios-group: rgba(255,255,255,0.75);
+  --ios-card: rgba(255,255,255,0.9);
 
-  /* ===== 枠線/影 ===== */
-  --border: rgba(10, 10, 20, 0.12);
-  --shadow: 0 10px 30px rgba(30, 30, 60, 0.12), 0 2px 10px rgba(30, 30, 60, 0.06);
-  --shadow-sm: 0 4px 12px rgba(30, 30, 60, 0.12);
-  --shadow-lg: 0 20px 60px rgba(30, 30, 60, 0.18);
-  --elev-1: 0 6px 18px rgba(30, 30, 60, 0.12);
-  --elev-2: 0 10px 30px rgba(30, 30, 60, 0.16);
+  /* ===== 枠線/影（iOS風ヘアライン） ===== */
+  --hairline-light: rgba(60, 60, 67, 0.18);
+  --hairline-strong: rgba(60, 60, 67, 0.29);
+  --border: var(--hairline-strong);
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 22px 60px rgba(0, 0, 0, 0.12);
+  --elev-1: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --elev-2: 0 10px 26px rgba(0, 0, 0, 0.10);
+  --blur-xs: 10px;
+  --blur-sm: 16px;
+  --blur: 22px;
+  --blur-lg: 28px;
+  /* Motion tokens */
+  --ease-smooth: cubic-bezier(.22,.61,.36,1);
+  --ease-out: cubic-bezier(.2, .0, 0, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
 
-  /* ===== ブランド/状態色 ===== */
-  --brand: #6b6bff;
-  --brand-strong: #5b5be8;
-  --accent: #9f54ff;
-  --success: #18a058;
+  /* ===== ブランド/状態色（iOSアクセントに寄せる） ===== */
+  --brand: #0a84ff;            /* iOS Blue */
+  --brand-strong: #0060df;
+  --accent: #7c5cff;           /* complementary purple */
+  --success: #2ac769;
   --warning: #f0a020;
-  --danger: #d03050;
+  --danger: #ff3b30;
   --grad-brand: linear-gradient(90deg, var(--brand), var(--accent));
+  --tint-blue: #0a84ff;
+  --tint-green: #34c759;
+  --tint-orange: #ff9f0a;
+  --tint-red: #ff3b30;
+  --tint-purple: #af52de;
 
   /* ===== タイポグラフィ ===== */
-  --font-sans: 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system,
-    Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
-  --font-size-body: 15px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Hiragino Sans", "Noto Sans JP", ui-sans-serif, system-ui,
+    Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-size-body: 15px; /* iOS default size */
   --line-height-body: 1.7;
   --font-size-small: 13px;
   --line-height-small: 1.6;
@@ -43,6 +73,11 @@
   /* 見出し（流体タイポ） */
   --fz-display: clamp(28px, 5.2vw, 44px);
   --fz-h1: clamp(22px, 3.6vw, 30px);
+  --tracking-tight: 0.005em;
+  --tracking-normal: 0.01em;
+  --weight-regular: 400;
+  --weight-medium: 600;
+  --weight-bold: 800;
 
   /* ===== スペーシング ===== */
   --sp-1: 4px;
@@ -53,11 +88,12 @@
   --sp-6: 24px;
   --sp-7: 32px;
   --sp-8: 40px;
+  --sp-9: 56px;
 
-  /* ===== 角丸 ===== */
-  --radius-1: 8px;
-  --radius-2: 12px;
-  --radius-3: 16px;
+  /* ===== 角丸（iOS寄り） ===== */
+  --radius-1: 10px;
+  --radius-2: 14px;
+  --radius-3: 18px;
   --radius-4: 24px;
   --radius-round: 999px;
 
@@ -65,12 +101,14 @@
   --topbar-h: 56px;
   --sidebar-w: min(320px, 22vw);
   --composer-h: 72px;
+  --safe-bottom: env(safe-area-inset-bottom);
 
   /* ===== フィードバック/アクセシビリティ ===== */
-  --focus-ring: 0 0 0 3px rgba(107, 107, 255, 0.25);
+  --focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.22);
   --focus-border: var(--brand);
-  --scrollbar-thumb: rgba(107, 107, 255, 0.35);
-  --scrollbar-thumb-hover: rgba(107, 107, 255, 0.5);
+  --scrollbar-thumb: rgba(10, 132, 255, 0.35);
+  --scrollbar-thumb-hover: rgba(10, 132, 255, 0.5);
+  --scrollbar-track: rgba(10,10,20,0.05);
 
   /* ===== コードテーマ ===== */
   --code-bg: #0f172a;
@@ -85,20 +123,71 @@
   :root { --topbar-h: 48px; }
 }
 
+/* ===== 密度（コンパクト） ===== */
+html[data-density="compact"] {
+  --topbar-h: 48px;
+  --composer-h: 64px;
+  --font-size-body: 14px;
+  --line-height-body: 1.6;
+}
+
 /* ===== ダークテーマ用トークン上書き ===== */
 html[data-theme="dark"] {
   --bg-app: #0b1020;
-  --text-0: #c7d2fe;
+  --text-0: #dbe3ff;
   --text-1: #e6eaff;
-  --text-muted: #9aa1b2;
+  --text-muted: #a6aec4;
   --surface-weak: rgba(20, 20, 35, 0.45);
-  --surface: rgba(20, 20, 35, 0.7);
+  --surface: rgba(20, 20, 35, 0.72);
   --surface-strong: rgba(20, 20, 35, 0.9);
   --surface-ultra: rgba(14, 16, 28, 0.96);
-  --border: rgba(255, 255, 255, 0.08);
+  --separator: rgba(255,255,255,0.12);
+  --separator-weak: rgba(255,255,255,0.08);
+  --border: rgba(84, 84, 88, 0.36); /* iOS dark hairline */
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0,0,0,0.35);
   --shadow-sm: 0 6px 18px rgba(0,0,0,0.4);
   --shadow-lg: 0 24px 70px rgba(0,0,0,0.6);
+  --ios-group: rgba(18,18,30,0.72);
+  --ios-card: rgba(22,22,36,0.9);
   --code-bg: #0b1020;
   --code-fg: #c7d2fe;
+  --scrollbar-track: rgba(255,255,255,0.06);
+}
+
+/* ===== Simple Mode: minimal, calm palette ===== */
+html[data-simple="on"] {
+  --bg-app: #111316;
+  --text-0: #e8ecff;
+  --text-1: #f3f6ff;
+  --text-muted: #98a2b3;
+  --surface-weak: rgba(22, 25, 32, 0.6);
+  --surface: rgba(26, 30, 38, 0.7);
+  --surface-strong: rgba(27, 31, 40, 0.85);
+  --surface-ultra: rgba(18, 22, 30, 0.96);
+  --border: rgba(255,255,255,0.08);
+  --brand: #7c3aed; /* calmer purple */
+  --brand-strong: #6d28d9;
+  --accent: #8b5cf6;
+  --shadow: 0 10px 30px rgba(0,0,0,0.45);
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.35);
+  --shadow-lg: 0 24px 70px rgba(0,0,0,0.55);
+  --scrollbar-track: rgba(255,255,255,0.06);
+}
+
+/* ===== 高コントラスト トークン上書き ===== */
+html[data-contrast="high"] {
+  --border: rgba(10, 10, 20, 0.22);
+  --surface-weak: rgba(255, 255, 255, 0.55);
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --text-muted: #4b5563;
+  --focus-ring: 0 0 0 3px rgba(107, 107, 255, 0.35);
+}
+html[data-theme="dark"][data-contrast="high"] {
+  --border: rgba(255, 255, 255, 0.16);
+  --surface-weak: rgba(20, 20, 35, 0.65);
+  --surface: rgba(20, 20, 35, 0.86);
+  --surface-strong: rgba(20, 20, 35, 0.96);
+  --text-muted: #c7d2fe;
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.5);
 }

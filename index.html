@@ -15,8 +15,11 @@
     <link rel="stylesheet" href="./src/styles/app.css" />
     <link rel="stylesheet" href="./src/styles/chat.css" />
     <link rel="stylesheet" href="./src/styles/glass.css" />
+    <link rel="stylesheet" href="./src/styles/simple.css" />
+    <link rel="stylesheet" href="./src/styles/fii.css" />
   </head>
   <body>
+    <a href="#input" class="skip-link">メインコンテンツへスキップ</a>
     <div id="bg-gradient" aria-hidden="true"></div>
 
     <header class="topbar" role="banner">
@@ -27,6 +30,7 @@
       </div>
     </header>
 
+    <div id="fiiRoot" class="fii-root" aria-label="Fluid Intelligence Interface"></div>
     <div class="container">
       <aside id="sidebar" class="sidebar" aria-label="会話の履歴とプロジェクト">
         <div class="sidebar-header">
@@ -46,6 +50,8 @@
               <option value="project">プロジェクトで表示</option>
             </select>
           </div>
+          <!-- Projects quick panel -->
+          <div id="projectNav" class="project-nav"><!-- JS で挿入 --></div>
         </div>
         <nav id="chatList" class="chat-list" aria-label="履歴一覧">
           <!-- JSで挿入 -->
@@ -154,8 +160,21 @@
         </header>
         
         <div class="modal-body enhanced-body">
+          <!-- Settings Tabs Navigation -->
+          <nav class="settings-tabs" role="tablist" aria-label="設定カテゴリ">
+            <button class="tab-btn" id="tab-safety" role="tab" aria-selected="true" aria-controls="settings-safety">セーフティ/トーン</button>
+            <button class="tab-btn" id="tab-appearance" role="tab" aria-selected="false" aria-controls="settings-appearance">外観</button>
+            <button class="tab-btn" id="tab-experiments" role="tab" aria-selected="false" aria-controls="settings-experiments">実験</button>
+            <button class="tab-btn" id="tab-labs" role="tab" aria-selected="false" aria-controls="settings-labs">Labs</button>
+            <button class="tab-btn" id="tab-profile" role="tab" aria-selected="false" aria-controls="settings-profile">プロフィール</button>
+            <button class="tab-btn" id="tab-projects" role="tab" aria-selected="false" aria-controls="settings-projects">プロジェクト</button>
+            <button class="tab-btn" id="tab-audio" role="tab" aria-selected="false" aria-controls="settings-audio">音声</button>
+            <button class="tab-btn" id="tab-achievements" role="tab" aria-selected="false" aria-controls="settings-achievements">実績</button>
+            <button class="tab-btn" id="tab-export" role="tab" aria-selected="false" aria-controls="settings-export">エクスポート</button>
+            <button class="tab-btn" id="tab-data" role="tab" aria-selected="false" aria-controls="settings-data">データ管理</button>
+          </nav>
           <!-- Safety Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-safety" role="tabpanel" aria-labelledby="tab-safety">
             <div class="section-header">
               <div class="section-icon">🛡️</div>
               <div class="section-info">
@@ -204,7 +223,7 @@
             </div>
           </div>
           <!-- Appearance Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-appearance" role="tabpanel" aria-labelledby="tab-appearance">
             <div class="section-header">
               <div class="section-icon">🎨</div>
               <div class="section-info">
@@ -224,6 +243,37 @@
                     <option value="light">ライト</option>
                     <option value="dark">ダーク</option>
                   </select>
+                </div>
+              </div>
+              <div class="field enhanced-field">
+                <label class="field-label" for="simpleModeToggle">
+                  <span class="label-text">シンプルモード</span>
+                  <span class="label-description">フラットでミニマルなUI（Chatアプリ風の落ち着いた外観）</span>
+                </label>
+                <div>
+                  <input id="simpleModeToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+              <div class="field enhanced-field">
+                <label for="densitySelect" class="field-label">
+                  <span class="label-text">密度</span>
+                  <span class="label-description">コンポーネントの間隔を調整（コンパクト/ゆったり）</span>
+                </label>
+                <div class="custom-select-wrapper">
+                  <select id="densitySelect" class="enhanced-select">
+                    <option value="comfortable">ゆったり</option>
+                    <option value="compact">コンパクト</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field enhanced-field">
+                <label class="field-label" for="contrastToggle">
+                  <span class="label-text">高コントラスト</span>
+                  <span class="label-description">境界やテキストのコントラストを強調（アクセシビリティ向上）</span>
+                </label>
+                <div>
+                  <input id="contrastToggle" type="checkbox" class="toggle" />
                 </div>
               </div>
               
@@ -259,9 +309,11 @@
                   <input id="glassToggle" type="checkbox" class="toggle" />
                 </div>
               </div>
+            </div>
+          </div>
 
           <!-- Experiments Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-experiments" role="tabpanel" aria-labelledby="tab-experiments">
             <div class="section-header">
               <div class="section-icon">🧪</div>
               <div class="section-info">
@@ -279,11 +331,20 @@
                   <input id="newUiToggle" type="checkbox" class="toggle" />
                 </div>
               </div>
+              <div class="field enhanced-field">
+                <label class="field-label" for="fiiToggle">
+                  <span class="label-text">Fluid Intelligence Interface (FII)</span>
+                  <span class="label-description">非線形の知的グラフUI（実験・既定はオフ）</span>
+                </label>
+                <div>
+                  <input id="fiiToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- Labs Section (Beta/Alpha/Research) -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-labs" role="tabpanel" aria-labelledby="tab-labs">
             <div class="section-header">
               <div class="section-icon">🔬</div>
               <div class="section-info">
@@ -369,11 +430,9 @@
               </div>
             </div>
           </div>
-            </div>
-          </div>
 
           <!-- Profile Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-profile" role="tabpanel" aria-labelledby="tab-profile">
             <div class="section-header">
               <div class="section-icon">👤</div>
               <div class="section-info">
@@ -400,11 +459,25 @@
                   <span id="userImageName" style="font-size:12px; opacity:.7;"></span>
                 </div>
               </div>
+          </div>
+        </div>
+
+          <!-- Projects Section (per-project defaults) -->
+          <div class="settings-section" id="settings-projects" role="tabpanel" aria-labelledby="tab-projects">
+            <div class="section-header">
+              <div class="section-icon">🗂️</div>
+              <div class="section-info">
+                <h3>プロジェクト</h3>
+                <p>プロジェクトごとの既定設定</p>
+              </div>
+            </div>
+            <div class="section-content">
+              <div id="projectManager"></div>
             </div>
           </div>
 
           <!-- Audio Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-audio" role="tabpanel" aria-labelledby="tab-audio">
             <div class="section-header">
               <div class="section-icon">🔊</div>
               <div class="section-info">
@@ -436,7 +509,7 @@
           </div>
 
           <!-- Achievements (Asobi) -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-achievements" role="tabpanel" aria-labelledby="tab-achievements">
             <div class="section-header">
               <div class="section-icon">🏅</div>
               <div class="section-info">
@@ -450,7 +523,7 @@
           </div>
 
           <!-- Export/Import Section -->
-          <div class="settings-section">
+          <div class="settings-section" id="settings-export" role="tabpanel" aria-labelledby="tab-export">
             <div class="section-header">
               <div class="section-icon">📤</div>
               <div class="section-info">
@@ -472,7 +545,7 @@
           </div>
 
           <!-- Data Management Section -->
-          <div class="settings-section danger-section">
+          <div class="settings-section danger-section" id="settings-data" role="tabpanel" aria-labelledby="tab-data">
             <div class="section-header">
               <div class="section-icon">🗑️</div>
               <div class="section-info">

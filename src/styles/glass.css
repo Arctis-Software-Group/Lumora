@@ -4,8 +4,8 @@
 html[data-glass="on"] body { background: linear-gradient(180deg, #ecf1ff, #f8fbff); }
 
 html[data-glass="on"] #bg-gradient {
-  filter: blur(30px) saturate(135%) brightness(1.05) hue-rotate(10deg);
-  opacity: 0.9;
+  filter: blur(var(--blur-lg)) saturate(160%) brightness(1.06) hue-rotate(8deg);
+  opacity: 0.92;
 }
 
 /* Core surfaces */
@@ -22,8 +22,8 @@ html[data-glass="on"] .chip,
 html[data-glass="on"] .plan-badge {
   background: rgba(255,255,255,0.55) !important;
   border-color: rgba(120,130,200,0.25) !important;
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: saturate(180%) blur(var(--blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
   box-shadow: 0 12px 40px rgba(30,40,80,0.12);
 }
 
@@ -69,4 +69,3 @@ html[data-glass="on"] .thinking-bubbles::after {
   animation: lg-shimmer 1.8s linear infinite;
 }
 @keyframes lg-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
