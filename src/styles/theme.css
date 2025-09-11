@@ -363,6 +363,11 @@ html[data-simple="on"] .select-dropdown { box-shadow: none; }
     left: auto;
   }
 }
+/* Mobile-only controls */
+.mobile-only { display: none; }
+@media (max-width: 860px) {
+  .mobile-only { display: inline-flex; align-items: center; justify-content: center; }
+}
 @media (max-width: 960px) {
   .topbar .controls { margin-left: 12px; }
   .model-selector-container { width: min(72vw, 320px); }

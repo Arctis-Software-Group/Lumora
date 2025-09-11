@@ -9,7 +9,8 @@ const MODELS = [
   { label: 'Qwen 3', id: 'qwen/qwen3-235b-a22b:free', provider: 'openrouter', plan: 'free' },
   { label: 'Qwen 3 30B Thinking', id: 'qwen/qwen3-30b-a3b-thinking-2507:free', provider: 'openrouter', plan: 'free' },
   { label: 'Qwen 2.5 VL 32B', id: 'qwen/qwen2.5-vl-32b-instruct:free', provider: 'openrouter', plan: 'free' },
-  { label: 'Nemotron Nano 9B v2', id: 'nvidia/nemotron-nano-9b-v2:free', provider: 'openrouter', plan: 'free' },
+  { label: 'LFM 7B', id: 'liquid/lfm-7b', provider: 'openrouter', plan: 'free' },
+  { label: 'Nemotron Nano 9B v2', id: 'nvidia/nemotron-nano-9b-v2', provider: 'openrouter', plan: 'free' },
 
   // Go Plan - 安定性と多様な選択肢を提供
   { label: 'GPT-OSS 20B', id: 'openai/gpt-oss-20b', provider: 'openrouter', plan: 'go' },
@@ -51,6 +52,12 @@ const ID_TO_INFO = new Map(MODELS.map((m) => [m.id, m]));
 export function getProviderAndId(labelOrId) {
   // label か、既に provider/model-id 形式のIDのいずれにも対応
   if (typeof labelOrId === 'string' && labelOrId.includes('/')) {
+    // Nemotron v2 互換: 旧 ":free" サフィックスを無印IDへ移行
+    if (labelOrId === 'nvidia/nemotron-nano-9b-v2:free') {
+      const m = ID_TO_INFO.get('nvidia/nemotron-nano-9b-v2');
+      if (m) return { provider: m.provider, providerModelId: m.id, plan: m.plan };
+      return { provider: 'openrouter', providerModelId: 'nvidia/nemotron-nano-9b-v2', plan: inferPlan('nvidia/nemotron-nano-9b-v2') };
+    }
     const known = ID_TO_INFO.get(labelOrId);
     if (known) return { provider: known.provider, providerModelId: known.id, plan: known.plan };
     return { provider: 'openrouter', providerModelId: labelOrId, plan: inferPlan(labelOrId) };
@@ -79,4 +86,3 @@ function inferPlan(providerModelId) {
 }
 
 export function allModels() { return MODELS.slice(); }
-

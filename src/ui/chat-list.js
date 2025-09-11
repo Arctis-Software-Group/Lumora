@@ -75,7 +75,8 @@ export function renderChatList(s) {
           const id = await st.createLockedChat({ title: title || '新しいチャット', passcode: pass.trim() });
           st.selectChat(id);
           renderChatList(st);
-          location.reload();
+          // 切り替えはリロードせず安全に行う
+          try { const m = await import('../app/main.js'); m.openChatById(id); } catch (_) { /* fallback */ location.reload(); }
           return;
         } catch (e) {
           try { import('./toast.js').then(({ showToast }) => showToast('このブラウザは暗号化に対応していません')); } catch (_) {}
@@ -84,7 +85,7 @@ export function renderChatList(s) {
       const id = st.createChat({ title: title || '新しいチャット' });
       st.selectChat(id);
       renderChatList(st);
-      location.reload();
+      try { const m = await import('../app/main.js'); m.openChatById(id); } catch (_) { location.reload(); }
     });
   }
   // グループ選択
@@ -139,7 +140,7 @@ function renderItem(st, id) {
     }
     st.selectChat(id);
     renderChatList(st);
-    location.reload();
+    try { const m = await import('../app/main.js'); m.openChatById(id); } catch (_) { location.reload(); }
   });
   const favBtn = item.querySelector('.fav-btn');
   favBtn?.addEventListener('click', (e) => {

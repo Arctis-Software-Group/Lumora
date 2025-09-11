@@ -60,7 +60,7 @@ function resolveModel(input) {
     ['Uncensored', 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free'],
     ['Hermes 4 405B', 'nousresearch/hermes-4-405b'],
     ['Hermes 4 70B', 'nousresearch/hermes-4-70b'],
+    ['LFM 7B', 'liquid/lfm-7b'],
   ]);
   return labelToId.get(input) || null;
 }
-

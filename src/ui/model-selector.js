@@ -11,7 +11,8 @@ const MODELS = [
   { label: 'Qwen 3', id: 'qwen/qwen3-235b-a22b:free', plan: 'free', caps: ['reasoning'] },
   { label: 'Qwen 3 30B Thinking', id: 'qwen/qwen3-30b-a3b-thinking-2507:free', plan: 'free', caps: ['reasoning'] },
   { label: 'Qwen 2.5 VL 32B', id: 'qwen/qwen2.5-vl-32b-instruct:free', plan: 'free', caps: ['vision'] },
-  { label: 'Nemotron Nano 9B v2', id: 'nvidia/nemotron-nano-9b-v2:free', plan: 'free', caps: ['fast','code'] },
+  { label: 'LFM 7B', id: 'liquid/lfm-7b', plan: 'free', caps: ['fast'] },
+  { label: 'Nemotron Nano 9B v2', id: 'nvidia/nemotron-nano-9b-v2', plan: 'free', caps: ['fast','code'] },
 
   // Go Plan - 安定性と多様な選択肢を提供
   { label: 'GPT-OSS 20B', id: 'openai/gpt-oss-20b', plan: 'go', caps: ['fast'] },
@@ -618,6 +619,10 @@ function coerceToKnownId(value) {
     // Nous Hermes 4
     ['hermes-4-405b', 'nousresearch/hermes-4-405b'],
     ['hermes-4-70b', 'nousresearch/hermes-4-70b'],
+    // Liquid LFM 7B（短い別名に対応）
+    ['lfm-7b', 'liquid/lfm-7b'],
+    // NVIDIA Nemotron Nano 9B v2（旧: :free → 新: 無印）
+    ['nvidia/nemotron-nano-9b-v2:free', 'nvidia/nemotron-nano-9b-v2'],
     // 旧プラン名互換（localStorageに残存する可能性）
     ['guest', 'openai/gpt-oss-20b:free'],
     ['plus', 'openai/gpt-oss-20b:free'],

@@ -9,17 +9,21 @@ function escapeHtml(raw) {
 }
 
 function renderInline(md) {
+  // 画像 ![alt](url)
+  md = md.replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g, (m, alt, url) => `<img src="${url}" alt="${escapeHtml(alt)}" loading="lazy" />`);
   // リンク [text](url)
-  md = md.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, text, url) => {
-    return `<a href="${url}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
-  });
+  md = md.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, text, url) => `<a href="${url}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`);
+  // 自動リンク（www. から始まるURL）
+  md = md.replace(/(^|\s)(www\.[^\s<)]+)(?=$|\s)/g, (m, space, url) => `${space}<a href="https://${url}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`);
   // 強調 **text**, __text__
   md = md.replace(/\*\*([^*]+)\*\*|__([^_]+)__/g, (m, a, b) => `<strong>${escapeHtml(a || b)}</strong>`);
   // 斜体 *text*, _text_
   md = md.replace(/\*(?!\*)([^*]+)\*|_([^_]+)_/g, (m, a, b) => `<em>${escapeHtml(a || b)}</em>`);
+  // 取り消し線 ~~text~~
+  md = md.replace(/~~([^~]+)~~/g, (m, s) => `<del>${escapeHtml(s)}</del>`);
   // インラインコード `code`
   md = md.replace(/`([^`]+)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
-  // 自動リンク（URL生文字）
+  // 自動リンク（http/https）
   md = md.replace(/(^|\s)(https?:[^\s<]+)(?=$|\s)/g, (m, space, url) => `${space}<a href="${url}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`);
   return md;
 }
@@ -110,7 +114,7 @@ export function renderMarkdown(input) {
       const text = h[2];
       const slug = text.toLowerCase().replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\-\s]/g, '').trim().replace(/\s+/g, '-');
       const body = renderInline(escapeHtml(text));
-      out.push(`<h${level} id="${slug}">${body}</h${level}>`);
+      out.push(`<h${level} id="${slug}">${body}<a class=\"md-anchor\" href=\"#${slug}\" aria-hidden=\"true\">#</a></h${level}>`);
       i++;
       continue;
     }
