@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Lumora</title>
     <meta name="description" content="Lumora - High-performance AI at a low cost" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -24,10 +24,11 @@
 
     <header class="topbar" role="banner">
       <div class="brand">Lumora</div>
-      <div class="controls">
-        <div id="modelSelectorContainer" class="model-selector-container"><!-- JS で挿入 --></div>
-        <div id="toneBadge" class="plan-badge" aria-live="polite" style="margin-left:8px; display:none;">Tone: Neutral</div>
-      </div>
+        <div class="controls">
+          <div id="modelSelectorContainer" class="model-selector-container"><!-- JS で挿入 --></div>
+          <div id="toneBadge" class="plan-badge" aria-live="polite" style="margin-left:8px; display:none;">Tone: Neutral</div>
+          <div id="studyBadge" class="plan-badge" aria-live="polite" style="margin-left:8px; display:none;">Study Mode</div>
+        </div>
     </header>
 
     <div id="fiiRoot" class="fii-root" aria-label="Fluid Intelligence Interface"></div>
@@ -83,6 +84,7 @@
               <div id="heroMenu" class="hero-menu" hidden>
                 <button id="attachBtn" class="menu-item" aria-label="写真とファイルを追加">📎 写真とファイルを追加</button>
                 <button id="thinkMoreBtn" class="menu-item" aria-label="より長く思考する">💡 より長く思考する</button>
+                <button id="studyModeBtn" class="menu-item" aria-label="Study Mode を切り替え">📚 Study Mode をオン</button>
                 <div class="menu-sep"></div>
                 <button id="reasoningBtn" class="menu-item has-sub" aria-haspopup="true" aria-expanded="false">⋯ 思考力を設定する ▸</button>
                 <div id="reasoningSub" class="submenu" hidden>

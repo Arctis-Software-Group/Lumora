@@ -111,6 +111,7 @@ button:focus-visible {
 .markdown pre { overflow: auto; background: var(--code-bg); color: var(--code-fg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
 /* 長文/長単語の安全な折返し */
 .markdown { overflow-wrap: anywhere; word-break: break-word; }
+.markdown img, .markdown video, .markdown canvas, .markdown svg { max-width: 100%; height: auto; }
 
 /* ドロップシャドウつきのモデルセレクタ下線アクセント */
 .topbar .controls { position: relative; }
@@ -738,6 +739,12 @@ html[data-simple="on"] .composer textarea { background: #1a1f26; border-color: r
 /* バブル入場アニメーション */
 .bubble.entering { animation: bubbleIn var(--dur) var(--ease-smooth); }
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Phone-size optimizations */
+@media (max-width: 420px) {
+  /* Hide live counter to save space */
+  .composer-actions #charCount { display: none; }
+}
 
 /* 録音インジケータと録音状態 */
 .mic-indicator { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-round); border: 1px solid var(--border); background: var(--surface-strong); box-shadow: var(--shadow); }

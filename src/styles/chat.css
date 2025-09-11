@@ -96,6 +96,10 @@ html[data-newui="on"] .code-header { box-shadow: 0 2px 6px rgba(30,30,60,0.06); 
 }
 .code-block pre code { display: block; width: max-content; min-width: 100%; }
 
+@media (max-width: 640px) {
+  .code-block pre { font-size: 12px; }
+}
+
 /* ダークテーマ調整 */
 html[data-theme="dark"] .action-btn,
 html[data-theme="dark"] .code-copy { background: rgba(20,20,35,0.75); color: #e6eaff; border-color: rgba(255,255,255,0.1); }
