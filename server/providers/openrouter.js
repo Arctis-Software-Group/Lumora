@@ -5,13 +5,14 @@ export async function streamFromOpenRouter({ model, messages, signal, apiKey, re
   if (!key) throw new Error('Missing OPENROUTER_API_KEY');
 
   const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const referer = process.env.OPENROUTER_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const resp = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
       'Authorization': `Bearer ${key}`,
-      'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'http://localhost:3000',
+      'HTTP-Referer': referer,
       'X-Title': 'Lumora'
     },
     body: JSON.stringify({
@@ -62,5 +63,4 @@ function resolveModel(input) {
   ]);
   return labelToId.get(input) || null;
 }
-
 

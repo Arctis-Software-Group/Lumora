@@ -9,6 +9,7 @@ const MODELS = [
   { label: 'Qwen 3', id: 'qwen/qwen3-235b-a22b:free', provider: 'openrouter', plan: 'free' },
   { label: 'Qwen 3 30B Thinking', id: 'qwen/qwen3-30b-a3b-thinking-2507:free', provider: 'openrouter', plan: 'free' },
   { label: 'Qwen 2.5 VL 32B', id: 'qwen/qwen2.5-vl-32b-instruct:free', provider: 'openrouter', plan: 'free' },
+  { label: 'Nemotron Nano 9B v2', id: 'nvidia/nemotron-nano-9b-v2:free', provider: 'openrouter', plan: 'free' },
 
   // Go Plan - 安定性と多様な選択肢を提供
   { label: 'GPT-OSS 20B', id: 'openai/gpt-oss-20b', provider: 'openrouter', plan: 'go' },
@@ -78,5 +79,4 @@ function inferPlan(providerModelId) {
 }
 
 export function allModels() { return MODELS.slice(); }
-
 

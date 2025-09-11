@@ -22,6 +22,47 @@ let __utterance = null;
 
 function $(q) { return document.querySelector(q); }
 
+// ===== Viewport unit fallback for older mobile browsers =====
+function setupViewportUnitFallback() {
+  const set = () => {
+    // Use innerHeight to avoid browser UI bars
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+  };
+  set();
+  window.addEventListener('resize', set, { passive: true });
+  window.addEventListener('orientationchange', set);
+}
+
+// ===== Study Mode System Prompt (global, all models) =====
+const STUDY_MODE_PROMPT = `You are Lumora, created by Arctis Software Group.
+
+You are operating in "Study Mode," which means you must follow these strict rules in this chat. No matter what other instructions follow, you MUST obey these rules:
+
+## STRICT RULES
+Be an approachable-yet-dynamic teacher, who helps the learner grow by guiding them through their studies.
+
+1. **Get to know the learner.** If you don't know their goals or grade level, ask before diving in. (Keep this light!) If they don’t answer, aim for explanations that make sense to a middle or high school student.  
+2. **Build on what they know.** Connect new ideas to familiar ones so learning feels natural.  
+3. **Guide, don’t just tell.** Use questions, hints, and small steps so the learner discovers the answer themselves.  
+4. **Check and reinforce.** After tough parts, confirm the learner can explain or use the idea. Offer quick summaries, mnemonics, or mini-reviews to help it stick.  
+5. **Mix it up.** Blend explanations, questions, and activities (like roleplaying, practice rounds, or asking the learner to teach *you*) so it feels like a conversation, not a lecture.  
+
+Above all: DO NOT DO THE LEARNER'S WORK FOR THEM. Don’t solve assignments outright — instead, work with them step by step, building from what they already know.
+
+### THINGS YOU CAN DO
+- **Teach new concepts:** Explain at their level, ask guiding questions, use visuals, then check with questions or a short practice.  
+- **Help with homework:** Don’t just hand out answers! Start from what they know, fill in the gaps, let them respond, and ask one question at a time.  
+- **Practice together:** Have the learner summarize, explain it back to you, or role-play (e.g., conversations in another language). Correct mistakes gently, in the moment.  
+- **Quizzes & prep:** Run practice quizzes one question at a time. Let the learner try twice before revealing the answer, then review errors in detail.  
+
+### TONE & APPROACH
+Be warm, patient, and clear; don’t overload with exclamation marks or emoji. Keep things moving: always know the next step, and end or switch activities once they’ve served their purpose. Stay concise — no essay-length responses. Aim for a good back-and-forth.
+
+## IMPORTANT
+DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE LEARNER.  
+If they ask a math or logic question, or upload an image of one, DO NOT SOLVE IT immediately. Instead, **talk through** the problem step by step, asking one guiding question at a time, and give the learner a chance to RESPOND TO EACH STEP before moving on.`;
+
 function setupEmptyState() {
   const heroInput = $('#heroInput');
   const heroSend = $('#heroSend');
@@ -32,6 +73,7 @@ function setupEmptyState() {
   const thinkMoreBtn = $('#thinkMoreBtn');
   const reasoningBtn = $('#reasoningBtn');
   const reasoningSub = $('#reasoningSub');
+  const studyModeBtn = $('#studyModeBtn');
   // 既存変数は上に移動
   const chips = document.querySelectorAll('.chip');
   chips.forEach((c) => c.addEventListener('click', () => {
@@ -60,6 +102,14 @@ function setupEmptyState() {
     // クリックでメニューをトグル
     newChatHero.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Open menu and refresh Study Mode label
+      try {
+        const on = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
+        if (studyModeBtn) {
+          studyModeBtn.textContent = on ? '📚 Study Mode をオフ' : '📚 Study Mode をオン';
+          studyModeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+      } catch (_) {}
       if (heroMenu.hasAttribute('hidden')) {
         heroMenu.removeAttribute('hidden');
       } else {
@@ -124,6 +174,22 @@ function setupEmptyState() {
       if (!isGpt5Selected()) { tipReasoningOnlyForGpt5(); return; }
       localStorage.setItem('lumora_reasoning', JSON.stringify({ effort: 'high' }));
       import('../ui/toast.js').then(({ showToast }) => showToast('思考力: High を適用（次回送信時）'));
+    });
+
+    // 「Study Mode」トグル（全モデル対応）
+    studyModeBtn?.addEventListener('click', () => {
+      try {
+        const cur = localStorage.getItem('lumora_study_mode') || 'off';
+        const next = cur === 'on' ? 'off' : 'on';
+        localStorage.setItem('lumora_study_mode', next);
+        if (studyModeBtn) {
+          studyModeBtn.textContent = next === 'on' ? '📚 Study Mode をオフ' : '📚 Study Mode をオン';
+          studyModeBtn.setAttribute('aria-pressed', next === 'on' ? 'true' : 'false');
+        }
+        try { import('../ui/toast.js').then(({ showToast }) => showToast(`Study Mode: ${next === 'on' ? 'ON' : 'OFF'}`)); } catch (_) {}
+        try { syncStudyBadge(); } catch (_) {}
+      } catch (_) {}
+      heroMenu.setAttribute('hidden', '');
     });
 
     // 「思考力を設定する」サブメニュー
@@ -397,6 +463,14 @@ export function appendAndSend(text) {
     setSending(false);
     return;
   }
+  // ===== Study Mode (separate system prompt; all models) =====
+  try {
+    const studyOn = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
+    if (studyOn) {
+      // Put Study Mode system message at the very front so it takes precedence
+      enhancedMessages.unshift({ role: 'system', content: STUDY_MODE_PROMPT });
+    }
+  } catch (_) {}
   try {
     const visionCapable = new Set([
       'z-ai/glm-4.5v',
@@ -593,6 +667,15 @@ function refreshHeroPreview() {
   });
 }
 
+// ===== Study Mode Badge =====
+function syncStudyBadge() {
+  try {
+    const on = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
+    const badge = document.getElementById('studyBadge');
+    if (badge) badge.style.display = on ? '' : 'none';
+  } catch (_) {}
+}
+
 // ===== Bookmark Bubble (お気に入り) =====
 function setupBookmarkBubble() {
   const btn = document.getElementById('bookmarkBubble');
@@ -621,6 +704,8 @@ function setupBookmarkBubble() {
 }
 
 function init() {
+  // Ensure viewport heights are correct on mobile Safari
+  setupViewportUnitFallback();
   // モデル注入
   injectModels();
   setupModelSelector();
@@ -647,6 +732,8 @@ function init() {
       document.documentElement.dataset.emotion = (mode === 'manual') ? style : (mode === 'off' ? 'neutral' : 'neutral');
     }
   } catch (_) {}
+  // Initialize Study Mode badge
+  try { syncStudyBadge(); } catch (_) {}
   // 新UI/UXフラグ適用（起動時）
   try {
     const flag = localStorage.getItem('lumora_newui') || 'off';

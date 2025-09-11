@@ -4,6 +4,17 @@
   height: calc(100vh - var(--topbar-h));
 }
 
+/* Prefer dynamic viewport on modern mobile browsers */
+@supports (height: 100dvh) {
+  .container { height: calc(100dvh - var(--topbar-h)); }
+  .app { min-height: calc(100dvh - var(--topbar-h)); }
+}
+/* Fallback for older iOS Safari (uses JS-updated --app-vh) */
+@supports not (height: 100dvh) {
+  .container { height: calc((var(--app-vh, 1vh) * 100) - var(--topbar-h)); }
+  .app { min-height: calc((var(--app-vh, 1vh) * 100) - var(--topbar-h)); }
+}
+
 .sidebar {
   border-right: 1px solid var(--separator);
   backdrop-filter: saturate(180%) blur(var(--blur-sm));
@@ -172,6 +183,8 @@ html[data-simple="on"] .chat-list .item.active { background: #222736; outline-co
   overflow: auto;
   padding: 16px 20px 12px;
 }
+/* Avoid background page scroll chaining on mobile */
+.messages { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 
 /* 新UI: 新着ピル */
 html[data-newui="on"] .new-pill {
@@ -414,6 +427,19 @@ html[data-density="compact"] .user-profile { gap: 8px; }
 @media (max-width: 860px) {
   .container { grid-template-columns: 1fr; }
   .sidebar { display: none; }
+}
+
+/* Mobile-first polish */
+@media (max-width: 640px) {
+  /* Prevent iOS zoom on focus */
+  input, select, textarea { font-size: 16px; }
+
+  /* Tighten hero input controls on very small screens */
+  .hero-input { grid-template-columns: 44px 1fr 44px; }
+  #heroMic { display: none; }
+
+  /* Keep tap targets accessible */
+  .icon-btn, .primary-btn { min-width: 44px; min-height: 44px; }
 }
 
 
