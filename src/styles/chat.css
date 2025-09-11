@@ -110,3 +110,13 @@ html[data-theme="dark"] .code-header { background: linear-gradient(135deg, rgba(
 .markdown th, .markdown td { border: 1px solid var(--border); padding: 8px; text-align: left; background: rgba(255,255,255,0.9); }
 .markdown thead th { background: linear-gradient(135deg, rgba(248,249,255,0.8), rgba(255,255,255,0.6)); font-weight: 700; }
 html[data-theme="dark"] .markdown th, html[data-theme="dark"] .markdown td { background: rgba(16,16,32,0.6); border-color: rgba(255,255,255,0.1); }
+
+/* Markdown headings: anchor links */
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { position: relative; }
+.markdown .md-anchor { margin-left: 8px; opacity: 0; text-decoration: none; color: var(--text-muted); transition: opacity .15s ease; }
+.markdown h1:hover .md-anchor,
+.markdown h2:hover .md-anchor,
+.markdown h3:hover .md-anchor,
+.markdown h4:hover .md-anchor,
+.markdown h5:hover .md-anchor,
+.markdown h6:hover .md-anchor { opacity: .9; }

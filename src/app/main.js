@@ -34,6 +34,37 @@ function setupViewportUnitFallback() {
   window.addEventListener('orientationchange', set);
 }
 
+// ===== Mobile sidebar drawer =====
+function setupMobileSidebarToggle() {
+  const btn = document.getElementById('mobileMenuBtn');
+  if (!btn || btn.__bound) return;
+  btn.__bound = true;
+  const root = document.documentElement;
+  let backdrop = null;
+  const open = () => {
+    root.dataset.mobileSidebar = 'open';
+    btn.setAttribute('aria-expanded', 'true');
+    // create backdrop lazily
+    backdrop = document.getElementById('sidebarBackdrop') || document.createElement('div');
+    backdrop.id = 'sidebarBackdrop';
+    backdrop.className = 'mobile-backdrop';
+    backdrop.addEventListener('click', close);
+    document.body.appendChild(backdrop);
+  };
+  const close = () => {
+    root.dataset.mobileSidebar = 'closed';
+    btn.setAttribute('aria-expanded', 'false');
+    try { backdrop?.remove(); } catch (_) {}
+    backdrop = null;
+  };
+  btn.addEventListener('click', () => {
+    const openNow = root.dataset.mobileSidebar === 'open';
+    if (openNow) close(); else open();
+  });
+  // expose for other modules
+  window.__lumora_closeMobileSidebar = close;
+}
+
 // ===== Study Mode System Prompt (global, all models) =====
 const STUDY_MODE_PROMPT = `You are Lumora, created by Arctis Software Group.
 
@@ -604,6 +635,34 @@ export function appendAndSend(text) {
   setSending(true, aborter);
 }
 
+// ===== Switch chat view (no reload) =====
+export function openChatById(chatId) {
+  if (!chatId) return;
+  try { state.selectChat(chatId); } catch (_) {}
+  try { renderChatList(state); } catch (_) {}
+  const emptyStateEl = document.getElementById('emptyState');
+  const messagesEl = document.getElementById('messages');
+  const composerEl = document.getElementById('composer');
+  if (!messagesEl) return;
+  // Clear messages container
+  messagesEl.innerHTML = '';
+  const history = state.getMessages(chatId);
+  if (!history || history.length === 0) {
+    if (emptyStateEl) emptyStateEl.style.display = 'block';
+    if (messagesEl) messagesEl.style.display = 'none';
+    if (composerEl) composerEl.style.display = 'none';
+  } else {
+    if (emptyStateEl) emptyStateEl.style.display = 'none';
+    if (messagesEl) messagesEl.style.display = 'block';
+    if (composerEl) composerEl.style.display = 'flex';
+    for (const m of history) {
+      appendMessage(m.role, m.content, { model: m.model, createdAt: m.createdAt });
+    }
+  }
+  // Close mobile sidebar if open
+  try { window.__lumora_closeMobileSidebar?.(); } catch (_) {}
+}
+
 function isGpt5Selected() {
   const id = localStorage.getItem('lumora_model') || '';
   return id === 'openai/gpt-5' || id === 'openai/gpt-5-mini' || id === 'openai/gpt-5-nano';
@@ -764,6 +823,7 @@ function init() {
   setupShortcuts();
   setupCommandPalette();
   setupBookmarkBubble();
+  setupMobileSidebarToggle();
   // Quick focus on composer for faster start
   try { document.getElementById('input')?.focus(); } catch (_) {}
   // Drag & drop attachments
