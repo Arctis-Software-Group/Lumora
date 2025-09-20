@@ -15,6 +15,15 @@ export default async function chatRoute(req, res, next) {
   const resolved = isAuto ? autoSelectModel({ messages, planHeader, reasoning }) : getProviderAndId(model);
   const provider = resolved.provider;
 
+  // Enforce plan gating for explicitly selected models as well
+  if (!isAuto) {
+    const allow = allowedPlanSet(planHeader);
+    if (!allow.has(resolved.providerModelId)) {
+      const label = labelFromId(resolved.providerModelId) || resolved.providerModelId;
+      return res.status(403).json({ error: { code: 'plan_required', message: `選択したモデル「${label}」は現在のプランではご利用いただけません。対応プランにアップグレードしてください。` } });
+    }
+  }
+
   try {
     let upstreamStream;
     if (provider === 'groq') {
@@ -99,21 +108,24 @@ function autoSelectModel({ messages, planHeader, reasoning }) {
 }
 
 function allowedPlanSet(planHeader) {
-  // guest: free only
-  // plus: go/free
-  // pro: pro/go/free
-  // pro+: max/ultra/pro/go/free
-  const all = new Set(allModels().map(m => m.id));
-  const free = new Set(Array.from(all).filter(id => id.endsWith(':free')));
-  const go = new Set(['openai/gpt-oss-20b','z-ai/glm-4.5-air:free','tencent/hunyuan-a13b-instruct','amazon/nova-micro-v1','amazon/nova-lite-v1','openai/gpt-5-nano','openai/gpt-oss-120b','meta-llama/llama-4-scout','google/gemini-2.5-flash-lite','baidu/ernie-4.5-vl-28b-a3b','nousresearch/hermes-4-70b']);
-  const pro = new Set(['deepseek/deepseek-chat-v3.1','openai/gpt-5-mini','openai/gpt-5','google/gemini-2.5-flash','google/gemini-2.5-pro','amazon/nova-pro-v1','x-ai/grok-3-mini','x-ai/grok-code-fast-1','nousresearch/hermes-4-405b']);
-  const max = new Set(['cognitivecomputations/dolphin-mistral-24b-venice-edition:free','anthropic/claude-sonnet-4','openai/gpt-4o','x-ai/grok-4','openai/o3-pro']);
+  // Build plan-based sets from the source of truth (server/providers/model-map.js)
+  const models = allModels();
+  const byPlan = (plan) => new Set(models.filter(m => m.plan === plan).map(m => m.id));
 
+  const free = byPlan('free');
+  const go = byPlan('go');
+  const pro = byPlan('pro');
+  const max = byPlan('max');
+  const ultra = byPlan('ultra');
+
+  // guest: free only
   if (planHeader === 'guest') return free;
+  // plus: Go and Free
   if (planHeader === 'plus') return new Set([...free, ...go]);
+  // pro: Pro, Go, and Free
   if (planHeader === 'pro') return new Set([...free, ...go, ...pro]);
-  // pro+ or unknown -> allow all we know
-  return new Set([...free, ...go, ...pro, ...max]);
+  // pro+ or unknown: include everything (Max and Ultra too)
+  return new Set([...free, ...go, ...pro, ...max, ...ultra]);
 }
 
 function firstAllowed(allow, candidates) {

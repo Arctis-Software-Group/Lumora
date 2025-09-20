@@ -1,10 +1,19 @@
 // 簡易FUP/レート制御: メモリ内にセッション単位で日次カウント
 const memory = new Map();
+// 管理者バイパス: セッション単位でレート制限を無効化
+const bypass = new Set();
 
 export function rateLimitMiddleware() {
   return (req, res, next) => {
     const plan = (req.headers['x-plan'] || 'guest').toLowerCase();
     const sid = req.sid || 'anon';
+    // 管理者バイパスはカウントも制限もしない
+    if (isBypassed(sid)) {
+      res.setHeader('x-usage-plan', 'bypass');
+      res.setHeader('x-usage-remaining', '2147483647');
+      res.setHeader('x-usage-reset', String(msToIso(nextMidnightMs())));
+      return next();
+    }
     const key = `${sid}:${dayKey()}`;
     const entry = memory.get(key) || { count: 0, plan };
     entry.count += 1;
@@ -25,6 +34,9 @@ export function rateLimitMiddleware() {
 }
 
 export function getUsage(sid) {
+  if (isBypassed(sid)) {
+    return { plan: 'bypass', remaining: 2147483647, resetAt: new Date(nextMidnightMs()).toISOString() };
+  }
   const entry = memory.get(`${sid}:${dayKey()}`) || { count: 0, plan: 'guest' };
   const { limit } = planLimit(entry.plan);
   return {
@@ -35,20 +47,26 @@ export function getUsage(sid) {
 }
 
 function planLimit(plan) {
-  if (plan === 'pro+') return { limit: 1000000, cooldownMs: 0 };
-  if (plan === 'pro') return { limit: 500000, cooldownMs: 0 };
-  if (plan === 'plus') return { limit: 500, cooldownMs: 60_000 };
-  // 旧体系: guest/plus/pro/pro+
-  if (plan === 'guest') return { limit: 100, cooldownMs: 120_000 };
-  if (plan === 'plus') return { limit: 500, cooldownMs: 60_000 };
-  if (plan === 'pro+') return { limit: 1000000, cooldownMs: 0 };
-  // 新体系: free/go/pro/max/ultra（当面は緩く許容。将来は厳密化）
-  if (plan === 'free') return { limit: 100, cooldownMs: 120_000 };
-  if (plan === 'go') return { limit: 500, cooldownMs: 60_000 };
-  if (plan === 'max') return { limit: 1000000, cooldownMs: 0 };
-  if (plan === 'ultra') return { limit: 1000000, cooldownMs: 0 };
-  return { limit: 100, cooldownMs: 120_000 };
+  // 旧体系（guest/plus/pro/pro+）と新体系（free/go/pro/max/ultra）を同等に扱う
+  const MAP = {
+    // legacy
+    guest: { limit: 100, cooldownMs: 120_000 },
+    plus: { limit: 500, cooldownMs: 60_000 },
+    pro: { limit: 500000, cooldownMs: 0 },
+    'pro+': { limit: 1000000, cooldownMs: 0 },
+    // new
+    free: { limit: 100, cooldownMs: 120_000 },
+    go: { limit: 500, cooldownMs: 60_000 },
+    max: { limit: 1000000, cooldownMs: 0 },
+    ultra: { limit: 1000000, cooldownMs: 0 }
+  };
+  return MAP[plan] || MAP.guest;
 }
+
+// ===== Admin Bypass helpers =====
+export function enableBypass(sid) { if (sid) bypass.add(sid); }
+export function disableBypass(sid) { if (sid) bypass.delete(sid); }
+export function isBypassed(sid) { return !!sid && bypass.has(sid); }
 
 function dayKey() { const d = new Date(); return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`; }
 function nextMidnightMs() { const d = new Date(); d.setHours(24,0,0,0); return d.getTime(); }

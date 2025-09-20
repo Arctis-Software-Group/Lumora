@@ -16,6 +16,8 @@ html[data-glass="on"] .content,
 html[data-glass="on"] .select-dropdown,
 html[data-glass="on"] .modal-content,
 html[data-glass="on"] .hero-input,
+html[data-glass="on"] .hero-menu,
+html[data-glass="on"] .submenu,
 html[data-glass="on"] .primary-btn,
 html[data-glass="on"] .icon-btn,
 html[data-glass="on"] .chip,
@@ -25,6 +27,12 @@ html[data-glass="on"] .plan-badge {
   backdrop-filter: saturate(180%) blur(var(--blur));
   -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
   box-shadow: 0 12px 40px rgba(30,40,80,0.12);
+}
+/* Composer + bar */
+html[data-glass="on"] .composer-attach-bar .attach-chip {
+  background: rgba(255,255,255,0.55);
+  border-color: rgba(120,130,200,0.25);
+  backdrop-filter: blur(16px) saturate(140%);
 }
 
 /* Bubble content subtle frost */
@@ -50,6 +58,15 @@ html[data-glass="on"] .messages.has-bottom-shadow::after { background: linear-gr
 
 /* Bookmark bubble in glass */
 html[data-glass="on"] .bookmark-bubble { background: rgba(255,255,255,0.55); border-color: rgba(120,130,200,0.25); backdrop-filter: blur(18px) saturate(130%); }
+/* Subtle specular highlight on bubbles */
+html[data-glass="on"] .content::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0.05));
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
 
 /* Thinking effect: glass capsule */
 html[data-glass="on"] .thinking-bubbles {

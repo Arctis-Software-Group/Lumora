@@ -37,7 +37,7 @@
 }
 .avatar.user { background: #111827; }
 .content {
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82));
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86));
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
   padding: 12px 14px;
@@ -68,9 +68,9 @@ button:focus-visible {
   box-shadow: 0 0 0 3px rgba(107, 107, 255, 0.24), 0 0 0 1px var(--brand);
 }
 
-.assistant .content { background: rgba(255,255,255,0.98); }
+.assistant .content { background: var(--surface-ultra); }
 .user .content {
-  background: linear-gradient(180deg, rgba(10,132,255,0.96), rgba(58,157,255,0.96));
+  background: linear-gradient(180deg, rgba(10,132,255,0.94), rgba(58,157,255,0.94));
   color: #fff;
   border-color: transparent;
 }
@@ -248,6 +248,25 @@ button:focus-visible {
   backdrop-filter: blur(var(--blur-xs));
   overflow-x: auto;
 }
+
+/* Pro: Multi-model selector chips */
+.pro-model-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.pro-model-list .pro-item { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--separator); background: var(--surface-strong); border-radius: var(--radius-round); cursor: pointer; user-select: none; transition: background var(--dur) var(--ease-smooth), border-color var(--dur) var(--ease-smooth), box-shadow var(--dur) var(--ease-smooth); position: relative; }
+.pro-model-list .pro-item input { accent-color: var(--brand); display: none; }
+.pro-model-list .pro-item .pro-name { font-weight: 600; font-size: 13px; }
+.pro-model-list .pro-item:hover { background: rgba(107,107,255,0.06); box-shadow: 0 6px 18px rgba(30,30,60,0.10); }
+.pro-model-list .pro-item.selected { background: linear-gradient(135deg, rgba(107,107,255,0.10), rgba(159,84,255,0.10)); border-color: color-mix(in oklab, var(--brand) 40%, var(--separator)); box-shadow: 0 8px 22px rgba(107,107,255,0.12); }
+.pro-model-list .pro-item.selected::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(107,107,255,0.18), transparent);
+  mix-blend-mode: screen;
+  animation: shimmer 1.8s linear infinite;
+  opacity: .6;
+}
+.pro-model-list .pro-item.selected::after { content: '✓'; position: absolute; right: 10px; font-size: 12px; opacity: .8; color: var(--brand); }
+html[data-theme="dark"] .pro-model-list .pro-item { background: rgba(20,20,35,0.65); border-color: rgba(255,255,255,0.1); }
+html[data-theme="dark"] .pro-model-list .pro-item.selected { background: linear-gradient(135deg, rgba(60,60,120,0.35), rgba(120,60,140,0.35)); border-color: rgba(140,120,200,0.35); box-shadow: 0 8px 22px rgba(0,0,0,0.45); }
 
 .settings-tabs .tab-btn {
   appearance: none;
@@ -894,17 +913,20 @@ html[data-theme="dark"] .bubble .meta { opacity: 0.8; color: #c7d2fe; }
   * { animation: none !important; transition: none !important; }
 }
 
-/* ===== GPT-5 thinking エフェクト（応答待ち） ===== */
-.thinking-bubbles { position: relative; display: inline-flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 999px; }
+/* ===== GPT-5 thinking エフェクト（応答待ち・推論レベルに応じて変化） ===== */
+.thinking-bubbles {
+  --think-color-1: var(--brand);
+  --think-color-2: var(--accent);
+  --think-speed: 1.1s;
+  --think-size: 9px;
+  position: relative; display: inline-flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 999px;
+}
 .thinking-bubbles::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(120% 150% at 50% -20%, rgba(159,84,255,0.18), transparent),
-              radial-gradient(120% 150% at 50% 140%, rgba(107,107,255,0.18), transparent);
+  position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: radial-gradient(120% 150% at 50% -20%, color-mix(in oklab, var(--think-color-2) 26%, transparent), transparent),
+              radial-gradient(120% 150% at 50% 140%, color-mix(in oklab, var(--think-color-1) 26%, transparent), transparent);
   filter: blur(8px);
-  z-index: -1;
 }
 .thinking-bubbles::after {
   content: '';
@@ -915,13 +937,18 @@ html[data-theme="dark"] .bubble .meta { opacity: 0.8; color: #c7d2fe; }
   animation: tb-shimmer 2.2s linear infinite;
 }
 @keyframes tb-shimmer { 0% { transform: translateX(-100%);} 100% { transform: translateX(100%);} }
-.thinking-bubbles .dot { width: 9px; height: 9px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--accent)); opacity: .9; animation: think 1.1s infinite ease-in-out; box-shadow: 0 0 10px rgba(107,107,255,0.35); }
-.thinking-bubbles.effort-high .dot { filter: saturate(1.25); box-shadow: 0 0 14px rgba(159,84,255,0.45); }
-.thinking-bubbles.effort-medium .dot { filter: saturate(1.1); }
-.thinking-bubbles.effort-low .dot { filter: saturate(0.95); }
+.thinking-bubbles .dot { width: var(--think-size); height: var(--think-size); border-radius: 50%; background: linear-gradient(135deg, var(--think-color-1), var(--think-color-2)); opacity: .95; animation: think var(--think-speed) infinite ease-in-out; box-shadow: 0 0 10px color-mix(in oklab, var(--think-color-1) 35%, transparent); }
+/* 推論レベル別の色・モーション変化 */
+.thinking-bubbles.effort-low { --think-color-1: hsl(210 90% 65%); --think-color-2: hsl(190 95% 60%); --think-speed: 1.35s; --think-size: 8px; }
+.thinking-bubbles.effort-medium { --think-color-1: hsl(38 92% 62%); --think-color-2: hsl(160 70% 50%); --think-speed: 1.1s; --think-size: 9px; }
+.thinking-bubbles.effort-high { --think-color-1: hsl(280 85% 65%); --think-color-2: hsl(320 88% 60%); --think-speed: 0.9s; --think-size: 10px; }
 .thinking-bubbles .dot:nth-child(2) { animation-delay: .12s; }
 .thinking-bubbles .dot:nth-child(3) { animation-delay: .24s; }
 @keyframes think { 0%, 80%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-2px) scale(1.06); } }
+
+/* 推論レベルバッジ */
+.reasoning-badge { margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #3b0764; background: linear-gradient(90deg, rgba(250,245,255,0.95), rgba(240,240,255,0.92)); border: 1px solid rgba(140,120,200,0.25); }
+html[data-theme="dark"] .reasoning-badge { color: #f5f3ff; background: linear-gradient(90deg, rgba(60,40,100,0.55), rgba(46,48,90,0.55)); border-color: rgba(220,220,255,0.15); }
 
 /* Asobi Achievements */
 .achievements { display: flex; flex-wrap: wrap; gap: 8px; }

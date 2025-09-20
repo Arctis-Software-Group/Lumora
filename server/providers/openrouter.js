@@ -53,6 +53,7 @@ function resolveModel(input) {
     ['Grok 3 Mini', 'x-ai/grok-3-mini'],
     ['Grok 4', 'x-ai/grok-4'],
     ['Grok Code Fast 1', 'x-ai/grok-code-fast-1'],
+    ['Grok 4 Fast', 'x-ai/grok-4-fast:free'],
     ['ChatGPT-4o-latest', 'openai/chatgpt-4o-latest'],
     ['Amazon Nova Lite', 'amazon/nova-lite-v1'],
     ['Amazon Nova Micro', 'amazon/nova-micro-v1'],

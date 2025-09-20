@@ -3,6 +3,7 @@
 const MODELS = [
   // Lumora Auto - 自動ルーティング（擬似プラン）
   { label: 'Lumora Auto', id: 'auto', plan: 'auto', caps: ['smart'] },
+  { label: 'Lumora Pro (Multi)', id: 'lumora/pro', plan: 'pro', caps: ['smart','reasoning','vision','fast'] },
   // Free Plan - 基本的なモデルを提供
   { label: 'GPT-OSS 20B', id: 'openai/gpt-oss-20b:free', plan: 'free', caps: ['fast'] },
   { label: 'Llama 3.2 3B', id: 'meta-llama/llama-3.2-3b-instruct', plan: 'free', caps: ['fast','code'] },
@@ -26,6 +27,7 @@ const MODELS = [
   { label: 'Gemini 2.5 Flash Lite', id: 'google/gemini-2.5-flash-lite', plan: 'go', caps: ['vision','fast'] },
   { label: 'ERNIE 4.5', id: 'baidu/ernie-4.5-vl-28b-a3b', plan: 'go', caps: ['vision','reasoning'] },
   { label: 'Hermes 4 70B', id: 'nousresearch/hermes-4-70b', plan: 'go', caps: ['code','reasoning'] },
+  { label: 'Grok 4 Fast', id: 'x-ai/grok-4-fast:free', plan: 'go', caps: ['fast','reasoning'] },
 
   // Pro Plan - 高度な推論とマルチモーダル機能を提供
   { label: 'DeepSeek V3.1', id: 'deepseek/deepseek-chat-v3.1', plan: 'pro', caps: ['reasoning'] },
@@ -97,6 +99,7 @@ export function injectModels() {
         </div>
         <div class="results-meta" aria-live="polite" aria-atomic="true"></div>
         <div class="model-list" id="modelList" role="listbox" aria-label="モデルを選択">
+          ${generatePinnedGroup()}
           ${generateFavoritesGroup()}
           ${generateRecentGroup()}
           ${generateModelGroups()}
@@ -167,7 +170,9 @@ function generateModelGroups() {
   ];
   
   return groups.map(group => {
-    const models = MODELS.filter(m => m.plan === group.key);
+    const PINNED = ['lumora/pro', 'auto'];
+    // Exclude pinned from regular groups to avoid duplicates
+    let models = MODELS.filter(m => m.plan === group.key && !PINNED.includes(m.id));
     if (models.length === 0) return '';
     
     return `
@@ -183,6 +188,23 @@ function generateModelGroups() {
       </div>
     `;
   }).join('');
+}
+
+// Pinned group: always show Lumora Auto and Lumora Pro at top
+function generatePinnedGroup() {
+  const pinnedIds = ['lumora/pro', 'auto'];
+  const items = pinnedIds
+    .map(id => MODELS.find(m => m.id === id))
+    .filter(Boolean);
+  if (items.length === 0) return '';
+  return `
+    <div class="model-group is-pinned" role="group" aria-labelledby="group-pinned">
+      <div class="group-header" id="group-pinned"><span class="group-icon">✨</span><span class="group-label">Lumora</span><span class="model-count">${items.length}</span></div>
+      <div class="model-options">
+        ${items.map(m => modelOptionHtml(m)).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function modelOptionHtml(model) {
@@ -277,8 +299,8 @@ export function setupModelSelector() {
     
     // Update selected state
   modelOptions.forEach(opt => { opt.classList.remove('selected'); opt.setAttribute('aria-selected', 'false'); });
-  const active = dropdown.querySelector(`[data-value="${modelId}"]`);
-  if (active) { active.classList.add('selected'); active.setAttribute('aria-selected', 'true'); }
+  const actives = dropdown.querySelectorAll(`[data-value="${modelId}"]`);
+  actives.forEach(active => { active.classList.add('selected'); active.setAttribute('aria-selected', 'true'); });
     
     // Save to localStorage and update badge
     localStorage.setItem('lumora_model', modelId);
@@ -288,6 +310,10 @@ export function setupModelSelector() {
       localStorage.setItem('lumora_plan', planKey);
     }
     window.__plan = planKey;
+    // Pro Mode UI: set root data attribute for styling hooks
+    try {
+      document.documentElement.dataset.pro = (modelId === 'lumora/pro') ? 'on' : 'off';
+    } catch (_) {}
     // 最近使ったモデルに追加
     pushRecent(modelId);
     try {
@@ -297,6 +323,9 @@ export function setupModelSelector() {
     try {
       if (document.documentElement.dataset.asobi === 'on' && (modelId === 'openai/gpt-5' || modelId === 'openai/gpt-5-mini' || modelId === 'openai/gpt-5-nano')) {
         import('./toast.js').then(({ showToast }) => showToast('GPT-5系の思考エフェクトを適用'));
+      }
+      if (modelId === 'lumora/pro') {
+        import('./toast.js').then(({ showToast }) => showToast('Lumora Pro: 設定 → Pro で「使用モデル（最大4）」と「統合モデル」を設定してください'));
       }
     } catch (_) {}
     
@@ -478,6 +507,10 @@ export function setupModelSelector() {
   const initialModel = MODELS.find(x => x.id === coerceToKnownId(saved)) || MODELS[0];
   // 初期選択をUIに反映し、planバッジも更新
   selectModel(initialModel.id);
+  // Pro Mode UI 初期反映
+  try {
+    document.documentElement.dataset.pro = (initialModel.id === 'lumora/pro') ? 'on' : 'off';
+  } catch (_) {}
   // フィルタの初期適用
   try {
     // capability chips
@@ -567,6 +600,8 @@ function coerceToKnownId(value) {
   const alias = new Map([
     // Auto 互換
     ['lumora-auto', 'auto'],
+    // Lumora Pro (multi)
+    ['lumora-pro', 'lumora/pro'],
     // GPT-5シリーズ
     ['gpt-5-mini', 'openai/gpt-5-mini'],
     ['gpt-5', 'openai/gpt-5'],
@@ -580,6 +615,7 @@ function coerceToKnownId(value) {
     ['grok-3-mini', 'x-ai/grok-3-mini'],
     ['grok-4', 'x-ai/grok-4'],
     ['grok-code-fast-1', 'x-ai/grok-code-fast-1'],
+    ['grok-4-fast', 'x-ai/grok-4-fast:free'],
     ['gpt-4o', 'openai/gpt-4o'],
     ['o3-pro', 'openai/o3-pro'],
     // 旧モデル（後方互換性）

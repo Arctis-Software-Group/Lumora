@@ -17,47 +17,64 @@
     <link rel="stylesheet" href="./src/styles/glass.css" />
     <link rel="stylesheet" href="./src/styles/simple.css" />
     <link rel="stylesheet" href="./src/styles/fii.css" />
+    <!-- Revamp overrides (loaded last) -->
+    <link rel="stylesheet" href="./src/styles/revamp.css" />
+    <link rel="stylesheet" href="./src/ui/rvi/style.css" />
+    <link rel="stylesheet" href="./src/ui/rvi/themes/liquid-glass.css" />
   </head>
   <body>
     <a href="#input" class="skip-link">メインコンテンツへスキップ</a>
     <div id="bg-gradient" aria-hidden="true"></div>
 
     <header class="topbar" role="banner">
-      <button id="mobileMenuBtn" class="icon-btn mobile-only" aria-label="メニュー" aria-controls="sidebar" aria-expanded="false" title="メニュー">☰</button>
-      <div class="brand">Lumora</div>
-        <div class="controls">
-          <div id="modelSelectorContainer" class="model-selector-container"><!-- JS で挿入 --></div>
-          <div id="toneBadge" class="plan-badge" aria-live="polite" style="margin-left:8px; display:none;">Tone: Neutral</div>
-          <div id="studyBadge" class="plan-badge" aria-live="polite" style="margin-left:8px; display:none;">Study Mode</div>
+      <div class="topbar-inner">
+        <div class="topbar-left">
+          <button id="mobileMenuBtn" class="icon-btn mobile-only" aria-label="メニュー" aria-controls="sidebar" aria-expanded="false" title="メニュー">☰</button>
+          <div class="brand-block" aria-label="Lumora ホーム">
+            <div class="brand">Lumora</div>
+            <div class="brand-tagline">Thoughtful AI workspace</div>
+          </div>
         </div>
+        <div class="topbar-right">
+            <div class="controls">
+              <div id="modelSelectorContainer" class="model-selector-container"><!-- JS で挿入 --></div>
+              <div id="toneBadge" class="plan-badge" aria-live="polite" style="display:none;">Tone: Neutral</div>
+              <div id="studyBadge" class="plan-badge" aria-live="polite" style="display:none;">Study Mode</div>
+              <div id="medicalBadge" class="plan-badge" aria-live="polite" style="display:none;">Medical Mode</div>
+              <div id="evoIndicator" class="plan-badge evo-indicator" aria-live="polite" style="display:none;" title="進化ログを表示/非表示">進化中… (0/0)</div>
+            </div>
+        </div>
+      </div>
     </header>
 
     <div id="fiiRoot" class="fii-root" aria-label="Fluid Intelligence Interface"></div>
     <div class="container">
       <aside id="sidebar" class="sidebar" aria-label="会話の履歴とプロジェクト">
         <div class="sidebar-header">
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button id="toggleSidebarBtn" class="icon-btn" title="サイドバーを折りたたむ" aria-label="サイドバーを折りたたむ">
-              <span class="chev">⟷</span>
-            </button>
-            <button id="newChatBtn" class="primary-btn">+ 新しいチャット</button>
-          </div>
-          <div class="search-box">
-            <input id="chatSearch" type="search" placeholder="チャットを検索" aria-label="チャットを検索" />
-          </div>
-          <div class="search-box" aria-label="グループ化">
-            <label for="groupSelect" class="sr-only">グループ化</label>
-            <select id="groupSelect" class="enhanced-select" style="width:100%;">
-              <option value="none">グループ化しない</option>
-              <option value="project">プロジェクトで表示</option>
-            </select>
-          </div>
-          <!-- Projects quick panel -->
-          <div id="projectNav" class="project-nav"><!-- JS で挿入 --></div>
+          <section class="sidebar-section is-actions">
+            <div class="sidebar-section-header">
+              <span class="sidebar-heading">Workspace</span>
+              <div class="sidebar-buttons">
+                <button id="toggleSidebarBtn" class="icon-btn" title="サイドバーを折りたたむ" aria-label="サイドバーを折りたたむ">
+                  <span class="chev">⟷</span>
+                </button>
+                <button id="newChatBtn" class="primary-btn">＋ 新しいチャット</button>
+              </div>
+            </div>
+          </section>
+          <section class="sidebar-section">
+            <div class="sidebar-section-header">
+              <span class="sidebar-heading">プロジェクト</span>
+            </div>
+            <div id="projectNav" class="project-nav"><!-- JS で挿入 --></div>
+          </section>
+          <section class="sidebar-section">
         </div>
-        <nav id="chatList" class="chat-list" aria-label="履歴一覧">
-          <!-- JSで挿入 -->
-        </nav>
+        <div class="sidebar-scroll">
+          <nav id="chatList" class="chat-list" aria-label="履歴一覧">
+            <!-- JSで挿入 -->
+          </nav>
+        </div>
         <div class="sidebar-footer">
           <div id="userProfile" class="user-profile" aria-label="ユーザープロフィール">
             <div class="avatar-wrap">
@@ -77,32 +94,63 @@
 
       <main id="app" class="app" role="main" aria-live="polite">
         <section id="emptyState" class="empty-state" aria-label="空の状態">
-          <h1>Hello I’m Lumora.</h1>
-          <p>Is there anything I can help you with?</p>
-          <div class="hero-input" role="search">
-            <div class="hero-menu-wrap">
-              <button id="newChatHero" class="sb-btn" title="新しいチャット" aria-label="新しいチャット">＋</button>
-              <div id="heroMenu" class="hero-menu" hidden>
-                <button id="attachBtn" class="menu-item" aria-label="写真とファイルを追加">📎 写真とファイルを追加</button>
-                <button id="thinkMoreBtn" class="menu-item" aria-label="より長く思考する">💡 より長く思考する</button>
-                <button id="studyModeBtn" class="menu-item" aria-label="Study Mode を切り替え">📚 Study Mode をオン</button>
-                <div class="menu-sep"></div>
-                <button id="reasoningBtn" class="menu-item has-sub" aria-haspopup="true" aria-expanded="false">⋯ 思考力を設定する ▸</button>
-                <div id="reasoningSub" class="submenu" hidden>
-                  <button class="sub-item" data-effort="high">High</button>
-                  <button class="sub-item" data-effort="medium">Medium</button>
-                  <button class="sub-item" data-effort="low">Low</button>
+          <div class="hero-frame">
+            <div class="hero-main">
+              <div class="hero-greeting">
+                <h1>Hello I’m Lumora.</h1>
+                <p>Is there anything I can help you with?</p>
+              </div>
+              <div class="hero-input" role="search">
+                <div class="hero-menu-wrap">
+                  <button id="newChatHero" class="sb-btn" title="新しいチャット" aria-label="新しいチャット">＋</button>
+                  <div id="heroMenu" class="hero-menu" hidden>
+                    <button id="attachBtn" class="menu-item" aria-label="写真とファイルを追加">📎 写真とファイルを追加</button>
+                    <button id="thinkMoreBtn" class="menu-item" aria-label="より長く思考する">💡 より長く思考する</button>
+                    <button id="studyModeBtn" class="menu-item" aria-label="Study Mode を切り替え" aria-pressed="false">📚 Study Mode をオン</button>
+                    <button id="medicalModeBtn" class="menu-item" aria-label="Medical Mode を切り替え" aria-pressed="false">🩺 Medical Mode をオン</button>
+                    <div class="menu-sep"></div>
+                    <button id="reasoningBtn" class="menu-item has-sub" aria-haspopup="true" aria-expanded="false">⋯ 思考力を設定する ▸</button>
+                    <div id="reasoningSub" class="submenu" hidden>
+                      <button class="sub-item" data-effort="high">High</button>
+                      <button class="sub-item" data-effort="medium">Medium</button>
+                      <button class="sub-item" data-effort="low">Low</button>
+                    </div>
+                  </div>
+                </div>
+                <div id="heroPreview" class="attach-preview" hidden></div>
+                <input id="heroInput" type="text" placeholder="アイデアや課題を入力してください" aria-label="アイデアや課題を入力してください" />
+                <button id="heroMic" class="sb-icon" title="音声入力" aria-label="音声入力">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19h2v3h-2z"/></svg>
+                </button>
+                <button id="heroSend" class="sb-send" title="送信" aria-label="送信">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+                </button>
+              </div>
+              <div class="hero-hints" aria-label="スターターヒント">
+                <button class="hero-hint purpose-chip" data-suggest="プロジェクトのゴール: \n背景: \n制約: \n\n上記をもとに、次のアクションを段階的に提案してください。" title="戦略セッション">🧠 戦略セッション</button>
+                <button class="hero-hint purpose-chip" data-suggest="ブランド/サービス: \n伝えたい価値: \n想定読者: \n\nトーン別に3つのメッセージ案を作成してください。" title="ブランドメッセージ">🎨 ブランドメッセージ</button>
+                <button class="hero-hint purpose-chip" data-suggest="修正したいコード:\n```lang\n// ここにコード\n```\nエラーや改善したい点:\n\n読みやすいリファクタ案と理由を示してください。" title="コードアシスト">⚡️ コードアシスト</button>
+              </div>
+              <div class="hero-info-grid" aria-label="Lumora tips">
+                <div class="hero-card gradient">
+                  <h3>ショートカット</h3>
+                  <p>⌘K でコマンドパレットを開き、チャット検索・モデル切り替え・設定に一瞬アクセスできます。</p>
+                  <div class="hero-shortcuts">
+                    <span class="shortcut-pill">⌘B サイドバー</span>
+                    <span class="shortcut-pill">⌘J 入力欄</span>
+                    <span class="shortcut-pill">⌘N 新規チャット</span>
+                  </div>
+                </div>
+                <div class="hero-card board">
+                  <h3>人気のブループリント</h3>
+                  <div class="hero-blueprints">
+                    <button class="hero-card-btn purpose-chip" data-suggest="リサーチ対象: \n知りたいこと: \n\n信頼できる情報源を引用しながら要点と次の打ち手をまとめてください。" title="リサーチ要約">🧭 リサーチ要約</button>
+                    <button class="hero-card-btn purpose-chip" data-suggest="ローンチする製品/サービス: \nターゲット: \n時期: \n\nSNS・メール・LP向けのメッセージを3パターン提案してください。" title="ローンチ計画">🚀 ローンチ計画</button>
+                    <button class="hero-card-btn purpose-chip" data-suggest="改善したいプロセス: \n現状の課題: \n制約: \n\n改善案を優先度順に示し、期待される効果を箇条書きでまとめてください。" title="改善ブリーフ">🛠️ 改善ブリーフ</button>
+                  </div>
                 </div>
               </div>
             </div>
-            <div id="heroPreview" class="attach-preview" hidden></div>
-            <input id="heroInput" type="text" placeholder="質問してみましょう" aria-label="質問してみましょう" />
-            <button id="heroMic" class="sb-icon" title="音声入力" aria-label="音声入力">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19h2v3h-2z"/></svg>
-            </button>
-            <button id="heroSend" class="sb-send" title="送信" aria-label="送信">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-            </button>
           </div>
         </section>
 
@@ -115,8 +163,44 @@
         <button id="bookmarkBubble" class="bookmark-bubble" title="このチャットをお気に入り" aria-label="このチャットをお気に入り" hidden>☆</button>
 
         <footer id="composer" class="composer" aria-label="メッセージ作成欄" style="display:none;">
+          <!-- 添付プレビュー（会話中） -->
+          <div id="composerPreview" class="composer-attach-bar" hidden></div>
+          <!-- メニュー（＋） -->
+          <div class="composer-menu-wrap">
+            <button id="composerPlus" class="icon-btn" title="ツール" aria-label="ツール">＋</button>
+            <div id="composerMenu" class="hero-menu" hidden>
+              <button id="composerAttachBtn" class="menu-item" aria-label="写真とファイルを追加">📎 写真とファイルを追加</button>
+              <button id="composerThinkMoreBtn" class="menu-item" aria-label="より長く思考する">💡 より長く思考する</button>
+              <button id="composerStudyModeBtn" class="menu-item" aria-label="Study Mode を切り替え" aria-pressed="false">📚 Study Mode をオン</button>
+              <button id="composerMedicalModeBtn" class="menu-item" aria-label="Medical Mode を切り替え" aria-pressed="false">🩺 Medical Mode をオン</button>
+              <div class="menu-sep"></div>
+              <button id="composerReasoningBtn" class="menu-item has-sub" aria-haspopup="true" aria-expanded="false">⋯ 思考力を設定する ▸</button>
+              <div id="composerReasoningSub" class="submenu" hidden>
+                <button class="sub-item" data-effort="high">High</button>
+                <button class="sub-item" data-effort="medium">Medium</button>
+                <button class="sub-item" data-effort="low">Low</button>
+              </div>
+              <div class="menu-sep"></div>
+              <button id="compTplSummarize" class="menu-item" aria-label="テンプレ: 要約">🧾 テンプレ: 要約</button>
+              <button id="compTplTranslate" class="menu-item" aria-label="テンプレ: 翻訳">🌐 テンプレ: 翻訳</button>
+              <button id="compTplExplain" class="menu-item" aria-label="テンプレ: 解説">📘 テンプレ: 解説</button>
+              <button id="compTplPrompt" class="menu-item" aria-label="テンプレ: プロンプト作成">💡 テンプレ: プロンプト</button>
+              <div class="menu-sep"></div>
+              <div class="menu-heading">Lumora Canvas™</div>
+              <label class="menu-check">
+                <input type="checkbox" id="canvasEnableToggle" />
+                <span>Canvas 機能を有効にする</span>
+              </label>
+              <div class="menu-radio-group" id="canvasModeOptions">
+                <label><input type="radio" name="canvasMode" value="auto" /> 自動表示</label>
+                <label><input type="radio" name="canvasMode" value="manual" /> 手動表示</label>
+                <label><input type="radio" name="canvasMode" value="off" /> 無効化</label>
+              </div>
+            </div>
+          </div>
           <textarea id="input" rows="1" placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）" aria-label="メッセージを入力"></textarea>
           <div class="composer-actions">
+            <button id="evoToggleBtn" class="icon-btn evo-toggle" title="進化ループ ON/OFF" aria-pressed="true">🔄 進化</button>
             <div id="charCount" class="char-count" aria-live="polite">0</div>
             <button id="micBtn" class="icon-btn" title="音声入力" aria-label="音声入力" aria-pressed="false">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19h2v3h-2z"/></svg>
@@ -139,6 +223,45 @@
     </footer>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <div id="canvasBackdrop" class="canvas-backdrop" hidden></div>
+    <aside id="canvasPanel" class="canvas-panel" hidden aria-label="Lumora Canvas">
+      <div class="canvas-header">
+        <div class="canvas-title-wrap">
+          <span class="canvas-title">Lumora Canvas™</span>
+          <span id="canvasMeta" class="canvas-meta">HTML</span>
+        </div>
+        <div class="canvas-header-actions">
+          <button id="canvasDownloadBtn" class="canvas-btn" type="button" title="ダウンロード">💾</button>
+          <button id="canvasCloseBtn" class="canvas-btn" type="button" title="閉じる">✕</button>
+        </div>
+      </div>
+      <div class="canvas-body">
+        <div class="canvas-pane editor">
+          <div class="canvas-pane-header">
+            <span>編集</span>
+            <button id="canvasCopyBtn" class="canvas-link" type="button">コピー</button>
+          </div>
+          <textarea id="canvasEditor" spellcheck="false" aria-label="Canvas Editor"></textarea>
+        </div>
+        <div class="canvas-pane preview">
+          <div class="canvas-pane-header">
+            <span id="canvasPreviewLabel">プレビュー</span>
+          </div>
+          <div id="canvasPreviewArea" class="canvas-preview-area" role="presentation"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Evolution Log Panel (right side) -->
+    <aside id="evoLogPanel" class="evo-log-panel" hidden>
+      <div id="evoResizer" class="evo-resizer" role="separator" aria-label="進化ログの幅を変更" tabindex="0"></div>
+      <div class="evo-log-header">
+        <div class="title"><span class="dot"></span><span>進化ログ</span><span class="subtitle">改良の過程を可視化</span></div>
+        <div class="right"><span class="stat">状態: <strong id="evoStatus">待機</strong></span><span id="evoModeChip" class="chip">進化</span><button id="evoLogClose" class="evo-log-close" title="閉じる">✕</button></div>
+      </div>
+      <div id="evoLogBody" class="evo-log-body" aria-live="polite"></div>
+    </aside>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
@@ -168,6 +291,7 @@
             <button class="tab-btn" id="tab-safety" role="tab" aria-selected="true" aria-controls="settings-safety">セーフティ/トーン</button>
             <button class="tab-btn" id="tab-appearance" role="tab" aria-selected="false" aria-controls="settings-appearance">外観</button>
             <button class="tab-btn" id="tab-experiments" role="tab" aria-selected="false" aria-controls="settings-experiments">実験</button>
+            <button class="tab-btn" id="tab-pro" role="tab" aria-selected="false" aria-controls="settings-pro">Pro</button>
             <button class="tab-btn" id="tab-labs" role="tab" aria-selected="false" aria-controls="settings-labs">Labs</button>
             <button class="tab-btn" id="tab-profile" role="tab" aria-selected="false" aria-controls="settings-profile">プロフィール</button>
             <button class="tab-btn" id="tab-projects" role="tab" aria-selected="false" aria-controls="settings-projects">プロジェクト</button>
@@ -286,9 +410,9 @@
                   <span class="label-description">チャットエリアの幅を調整</span>
                 </label>
                 <div class="range-wrapper">
-                  <input type="range" id="widthRange" class="enhanced-range" min="520" max="980" step="20" value="760" />
+                  <input type="range" id="widthRange" class="enhanced-range" min="600" max="1100" step="20" value="840" />
                   <div class="range-value">
-                    <span id="widthValue">760</span>px
+                    <span id="widthValue">840</span>px
                   </div>
                 </div>
               </div>
@@ -310,6 +434,62 @@
                 </label>
                 <div>
                   <input id="glassToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pro Section -->
+          <div class="settings-section" id="settings-pro" role="tabpanel" aria-labelledby="tab-pro">
+            <div class="section-header">
+              <div class="section-icon">💎</div>
+              <div class="section-info">
+                <h3>Lumora Pro：使用モデルの選択</h3>
+                <p>モデルセレクターで「Lumora Pro (Multi)」を選ぶと、ここで選択したモデル（最大4）で同時回答します</p>
+              </div>
+            </div>
+            <div class="section-content">
+              <div class="field enhanced-field">
+                <label class="field-label">
+                  <span class="label-text">使用モデルの選択（最大4）</span>
+                  <span class="label-description">Lumora 内のすべてのモデルから選択可能</span>
+                </label>
+                <div id="proModelList" class="pro-model-list" aria-live="polite"></div>
+                <div id="proModelCount" style="font-size:12px; opacity:.7; margin-top:6px;">0 / 4 選択中</div>
+              </div>
+
+              <div class="field enhanced-field">
+                <label class="field-label" for="proIntegrateSelect">
+                  <span class="label-text">統合モデル</span>
+                  <span class="label-description">各モデルの回答を統合する際に使用（全モデルから選択可）</span>
+                </label>
+                <div class="custom-select-wrapper">
+                  <select id="proIntegrateSelect" class="enhanced-select"></select>
+                </div>
+              </div>
+
+              <div class="field enhanced-field">
+                <label class="field-label" for="proEvoToggle">
+                  <span class="label-text">自己改良ループ（Lumora Pro Mode）</span>
+                  <span class="label-description">4モデル応答 → Nano統合 → 改善ループ（ONで透明性ログを表示可）</span>
+                </label>
+                <div>
+                  <input id="proEvoToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+
+              <div class="field enhanced-field">
+                <label class="field-label" for="proEvoRoundsSelect">
+                  <span class="label-text">改良回数</span>
+                  <span class="label-description">自動/1/2/4 回。多いほど品質向上しやすい（遅くなります）</span>
+                </label>
+                <div class="custom-select-wrapper">
+                  <select id="proEvoRoundsSelect" class="enhanced-select">
+                    <option value="auto">自動</option>
+                    <option value="1">1回</option>
+                    <option value="2">2回</option>
+                    <option value="4">4回</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -341,6 +521,104 @@
                 </label>
                 <div>
                   <input id="fiiToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+
+              <div class="field enhanced-field">
+                <label class="field-label" for="rviToggle">
+                  <span class="label-text">Realtime Visual Intelligence (RVI)</span>
+                  <span class="label-description">応答から視覚ブロック（要点/比較/手順 など）を抽出して表示（実験・既定はオン）</span>
+                </label>
+                <div>
+                  <input id="rviToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+
+              <!-- RVI Test Area -->
+              <div class="field enhanced-field" id="rviTestField">
+                <label class="field-label" for="rviTestInput">
+                  <span class="label-text">RVI テスト</span>
+                  <span class="label-description">下の入力に RVI JSON ブロック（【RVI-JSON】...【/RVI-JSON】 や ```rvi-json ... ```）または RVI タグ（例: [rviKeypoints]）を含むテキストを貼り、解析/プレビューを押してください。</span>
+                </label>
+                <textarea id="rviTestInput" rows="6" class="enhanced-select" placeholder="例: \n【RVI-JSON】{\n  \"type\": \"keypoints\", \n  \"payload\": { \n    \"title\": \"要点\", \n    \"items\": [\"一つ目\", \"二つ目\"] \n  }\n}【/RVI-JSON】\n\nまたは: [rviKeypoints title='ToDo']\n- 仕様を確認\n- UIを実装\n[/rviKeypoints]"></textarea>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                  <button id="rviTestSampleJsonBtn" class="secondary-btn" type="button">サンプル(JSON)</button>
+                  <button id="rviTestSampleTagBtn" class="secondary-btn" type="button">サンプル(タグ)</button>
+                  <button id="rviDemoKeypointsBtn" class="secondary-btn" type="button">サンプル: 要点</button>
+                  <button id="rviDemoStepsBtn" class="secondary-btn" type="button">サンプル: 手順</button>
+                  <button id="rviDemoChecklistBtn" class="secondary-btn" type="button">サンプル: チェック</button>
+                  <button id="rviDemoTimelineBtn" class="secondary-btn" type="button">サンプル: タイムライン</button>
+                  <button id="rviDemoComparisonBtn" class="secondary-btn" type="button">サンプル: 比較</button>
+                  <button id="rviDemoTradeoffsBtn" class="secondary-btn" type="button">サンプル: トレードオフ</button>
+                  <button id="rviDemoCauseEffectBtn" class="secondary-btn" type="button">サンプル: 因果関係</button>
+                  <button id="rviDemoMetricsBtn" class="secondary-btn" type="button">サンプル: 指標</button>
+                  <button id="rviTestParseBtn" class="primary-btn" type="button">解析/プレビュー</button>
+                  <button id="rviTestClearBtn" class="secondary-btn" type="button">クリア</button>
+                </div>
+                <div id="rviTestHost" class="rvi-test-host" style="margin-top:12px;">
+                  <!-- Mimic a message bubble host for RVI insertion -->
+                  <div class="bubble-main" id="rviTestBubbleHost">
+                    <div class="content markdown" id="rviTestContent"></div>
+                    <div class="meta" id="rviTestMeta">テストプレビュー</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <!-- Micro-Pause Insight (Experimental) -->
+              <div class="field enhanced-field">
+                <label class="field-label" for="microPauseToggle">
+                  <span class="label-text">Micro-Pause Insight™（実験）</span>
+                  <span class="label-description">入力の短い一時停止（500ms〜2s）で自然な続き候補を2〜3件提示。クリックで挿入、無視可</span>
+                </label>
+                <div>
+                  <input id="microPauseToggle" type="checkbox" class="toggle" />
+                </div>
+              </div>
+              <div class="field-note" style="font-size:12px; color: var(--warning, #b45309); margin: 6px 0 0 2px;">
+                注意: Micro-Pause Insight™は実験中の機能です。環境や混雑状況、モデルの応答性により「動作しない／候補が出ない」ことが非常に多くあります。今後のアップデートで安定性を改善予定です。
+              </div>
+              <div class="field enhanced-field">
+                <label class="field-label" for="microPauseModelSelect">
+                  <span class="label-text">Micro-Pause 用モデル</span>
+                  <span class="label-description">低コストの軽量モデルを使用</span>
+                </label>
+                <div class="custom-select-wrapper">
+                  <select id="microPauseModelSelect" class="enhanced-select">
+                    <option value="lfm-7b">LFM-7B（軽量・高速）</option>
+                    <option value="hunyuan-a13b-instruct">Hunyuan-A13B Instruct</option>
+                    <option value="google/gemma-3n-e4b-it">Gemma 3N e4B IT（Free）</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <!-- Lumora Canvas Settings (Experimental) -->
+              <div class="field enhanced-field">
+                <label class="field-label" for="canvasSettingsEnable">
+                  <span class="label-text">Lumora Canvas™</span>
+                  <span class="label-description">AI が生成した HTML / Markdown / Text を編集・プレビュー（コールアウト表示と自動起動）</span>
+                </label>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                  <label class="menu-check" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="canvasSettingsEnable" />
+                    <span>Canvas 機能を有効にする</span>
+                  </label>
+                  <div class="menu-radio-group" id="canvasSettingsModeGroup" style="display:flex; gap:14px; flex-wrap:wrap;">
+                    <label><input type="radio" name="canvasSettingsMode" id="canvasSettingsModeAuto" value="auto" /> 自動表示</label>
+                    <label><input type="radio" name="canvasSettingsMode" id="canvasSettingsModeManual" value="manual" /> 手動表示</label>
+                    <label><input type="radio" name="canvasSettingsMode" id="canvasSettingsModeOff" value="off" /> 無効化</label>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button id="canvasTestHtml" class="secondary-btn">Canvas をテスト（HTML）</button>
+                    <button id="canvasTestMarkdown" class="secondary-btn">Canvas をテスト（Markdown）</button>
+                    <button id="canvasTestText" class="secondary-btn">Canvas をテスト（Text）</button>
+                  </div>
+                  <div class="field-note" style="font-size:12px; opacity:.7;">
+                    自動表示は、AI応答に <code>[[canvasCallHtmlSite]]...[[/canvasCallHtmlSite]]</code> などのディレクティブが含まれている場合に発火します。
+                  </div>
                 </div>
               </div>
             </div>

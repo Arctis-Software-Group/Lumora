@@ -107,6 +107,9 @@ html[data-simple="on"] .composer { background: var(--simple-bg); border-top: 1px
 html[data-simple="on"] .composer textarea {
   background: var(--simple-surface); border: 1px solid var(--simple-border); box-shadow: none; color: #e7eaf3;
 }
+html[data-simple="on"] .composer .composer-menu-wrap #composerPlus { background: var(--simple-surface); border: 1px solid var(--simple-border); box-shadow: none; color: #e7eaf3; }
+html[data-simple="on"] .composer .hero-menu, html[data-simple="on"] .composer .submenu { background: var(--simple-surface); border: 1px solid var(--simple-border); box-shadow: none; }
+html[data-simple="on"] .composer-attach-bar .attach-chip { box-shadow: none; border: 1px solid var(--simple-border); background: #1a1f26; }
 
 /* Message bubbles */
 html[data-simple="on"] .content { background: #161a22; border: 1px solid var(--simple-border); box-shadow: none; }
@@ -118,6 +121,9 @@ html[data-simple="on"] .code-block { box-shadow: none; border-color: var(--simpl
 html[data-simple="on"] .code-header { background: #131620; border-bottom: 1px solid var(--simple-border); }
 html[data-simple="on"] .action-btn, html[data-simple="on"] .code-copy { background: var(--simple-surface); border: 1px solid var(--simple-border); box-shadow: none; color: #e7eaf3; }
 html[data-simple="on"] .action-btn:hover, html[data-simple="on"] .code-copy:hover { background: #191d28; }
+/* Remove bubble tails for flat look */
+html[data-simple="on"] .assistant .content::after,
+html[data-simple="on"] .user .content::after { content: none; display: none; }
 
 /* Projects chips */
 html[data-simple="on"] .proj-chip { background: var(--simple-surface); border: 1px solid var(--simple-border); box-shadow: none; color: #e7eaf3; }

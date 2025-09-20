@@ -24,6 +24,7 @@ const MODELS = [
   { label: 'Gemini 2.5 Flash Lite', id: 'google/gemini-2.5-flash-lite', provider: 'openrouter', plan: 'go' },
   { label: 'ERNIE 4.5', id: 'baidu/ernie-4.5-vl-28b-a3b', provider: 'openrouter', plan: 'go' },
   { label: 'Hermes 4 70B', id: 'nousresearch/hermes-4-70b', provider: 'openrouter', plan: 'go' },
+  { label: 'Grok 4 Fast', id: 'x-ai/grok-4-fast:free', provider: 'openrouter', plan: 'go' },
 
   // Pro Plan - 高度な推論とマルチモーダル機能を提供
   { label: 'DeepSeek V3.1', id: 'deepseek/deepseek-chat-v3.1', provider: 'openrouter', plan: 'pro' },
