@@ -7,10 +7,13 @@ import { setupModelSelector, getSelectedModel, getSelectedModelLabel, injectMode
 import { showToast } from '../ui/toast.js';
 import { sendMessageStream } from '../api/chat.js';
 import { buildFinalSystemPrompt, inferEmotionFromText } from '../safety/safety.js';
+import { MEDICAL_MODE_SYSTEM_PROMPT, MEDICAL_MODE_STORAGE_KEY, inferMedicalConsultType, ensureMedicalDisclaimer, buildMedicalGuidance } from '../shared/medical-mode.js';
+import { initCanvas, getCanvasPreferences, setCanvasEnabled as persistCanvasEnabled, setCanvasMode as persistCanvasMode, processCanvasMessage, restoreCanvasCallout, refreshCanvasPreferences } from '../ui/canvas.js';
 import { openSettings, setupSettings } from './settings.js';
 import { estimateConfidence } from '../lib/trust.js';
 import { loadProjects } from './projects.js';
 import { enableFII } from './fii.js';
+import { extractRviContent, renderRviBlocks } from '../ui/rvi/viewer.js';
 
 const state = initState();
 window.__lumora_state = state;
@@ -94,6 +97,197 @@ Be warm, patient, and clear; don’t overload with exclamation marks or emoji. K
 DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE LEARNER.  
 If they ask a math or logic question, or upload an image of one, DO NOT SOLVE IT immediately. Instead, **talk through** the problem step by step, asking one guiding question at a time, and give the learner a chance to RESPOND TO EACH STEP before moving on.`;
 
+const STUDY_MODE_STORAGE_KEY = 'lumora_study_mode';
+
+function isStudyModeOn() {
+  try { return (localStorage.getItem(STUDY_MODE_STORAGE_KEY) || 'off') === 'on'; } catch (_) { return false; }
+}
+
+function isMedicalModeEnabled() {
+  try { return (localStorage.getItem(MEDICAL_MODE_STORAGE_KEY) || 'off') === 'on'; } catch (_) { return false; }
+}
+
+// RVI system prompt (Japanese, instructs appending an RVI-JSON block when possible)
+const RVI_SYSTEM_PROMPT = `ユーザーの設定で "Realtime Visual Intelligence (RVI)" が有効です。
+あなたの応答が構造化可能であれば、回答の直後に以下の形式で視覚的要約を付与してください：
+
+【RVI-JSON】
+<ここに要点や比較、手順などの視覚要約をJSONで記述してください。テンプレートはtype: "keypoints", "steps", "comparison","checklist","timeline","tradeoffs","cause-effect","metrics","fallback"
+のいずれかで始めてください>
+【/RVI-JSON】
+
+そして、以下のような形式でRVIを作成すること。
+例１：
+タグベースの記法: 
+
+[rviKeypoints title="検討項目"]
+- デザイン調整
+- パフォーマンス
+- アクセシビリティ
+[/rviKeypoints]
+
+[rviComparison title="候補の比較" subtitle="A vs B" criteria='速度|品質|コスト']
+{ "options": [
+  { "title": "A案", "summary": "高速", "pros": ["スループット高"], "cons": ["品質ばらつき"] },
+  { "title": "B案", "summary": "安定", "pros": ["品質が高い"], "cons": ["やや遅い"] }
+]}
+[/rviComparison]
+
+例２：
+ここに視覚サマリーを表示します。
+
+【RVI-JSON】
+{
+  "type": "keypoints",
+  "version": "1.0",
+  "payload": {
+    "title": "本日の要点",
+    "items": [
+      { "title": "設計", "detail": "RVI の構成と責務を分離" },
+      ["実装", "JSON/タグの両対応"],
+      "動作確認 (Settings > 実験)"
+    ]
+  }
+}
+【/RVI-JSON】
+
+【RVI-JSON】
+{
+  "type": "steps",
+  "payload": {
+    "title": "次のステップ",
+    "steps": [
+      { "title": "UIを整える", "status": "done" },
+      { "title": "パーサ調整", "detail": "境界ケース対応", "status": "wip" },
+      { "title": "結合テスト", "duration": "~10m" }
+    ]
+  }
+}
+【/RVI-JSON】
+
+例３：
+要点のデモです。
+
+【RVI-JSON】
+{
+  "type": "keypoints",
+  "payload": {
+    "title": "会議の要点",
+    "subtitle": "Sprint 15",
+    "items": [
+      { "title": "進捗", "detail": "80% 完了" },
+      ["課題", "パフォーマンス最適化"],
+      "次のアクションを明確化"
+    ]
+  }
+}
+【/RVI-JSON】
+
+例４：
+手順のデモです。
+
+【RVI-JSON】
+{
+  "type": "steps",
+  "payload": {
+    "title": "リリース手順",
+    "subtitle": "v1.2.0",
+    "steps": [
+      { "title": "コードフリーズ", "status": "done" },
+      { "title": "結合テスト", "detail": "主要フロー", "duration": "~30m", "status": "wip" },
+      { "title": "本番デプロイ", "duration": "~10m" }
+    ]
+  }
+}
+【/RVI-JSON】
+
+これらの例はあくまで一部です。その場にあった感じで作成してください
+
+注意:
+- 回答本文は通常どおりに出力し、その直後にRVI-JSONブロックを1つだけ追加してください。
+- JSON内部には説明文や余計なコメントを入れないでください（純粋なデータのみ）。
+- ユーザーの言語とコンテキストに合わせ、没入感のある自然な体験を損なわないよう端的で明瞭に。`;
+
+function isRviEnabled() {
+  try {
+    const ds = document.documentElement?.dataset?.rvi;
+    if (ds === 'on') return true;
+    if (ds === 'off') return false;
+    const v = localStorage.getItem('lumora_rvi') || 'on';
+    return v === 'on';
+  } catch (_) { return true; }
+}
+
+function syncModeMenuButtons() {
+  try {
+    const studyOn = isStudyModeOn();
+    const studyButtons = [document.getElementById('studyModeBtn'), document.getElementById('composerStudyModeBtn')];
+    studyButtons.forEach((btn) => {
+      if (!btn) return;
+      btn.textContent = studyOn ? '📚 Study Mode をオフ' : '📚 Study Mode をオン';
+      btn.setAttribute('aria-pressed', studyOn ? 'true' : 'false');
+    });
+    const medicalOn = isMedicalModeEnabled();
+    const medicalButtons = [document.getElementById('medicalModeBtn'), document.getElementById('composerMedicalModeBtn')];
+    medicalButtons.forEach((btn) => {
+      if (!btn) return;
+      btn.textContent = medicalOn ? '🩺 Medical Mode をオフ' : '🩺 Medical Mode をオン';
+      btn.setAttribute('aria-pressed', medicalOn ? 'true' : 'false');
+    });
+  } catch (_) {}
+}
+
+function setStudyModeEnabled(on, { toast = true } = {}) {
+  const prev = isStudyModeOn();
+  if (on === prev) {
+    syncStudyBadge();
+    syncModeMenuButtons();
+    return true;
+  }
+  let message = '';
+  if (on) {
+    const medicalWasOn = isMedicalModeEnabled();
+    if (medicalWasOn) setMedicalModeEnabled(false, { toast: false });
+    try { localStorage.setItem(STUDY_MODE_STORAGE_KEY, 'on'); } catch (_) {}
+    message = medicalWasOn ? 'Study Mode: ON（Medical Modeをオフにしました）' : 'Study Mode: ON';
+  } else {
+    try { localStorage.setItem(STUDY_MODE_STORAGE_KEY, 'off'); } catch (_) {}
+    message = 'Study Mode: OFF';
+  }
+  syncStudyBadge();
+  syncModeMenuButtons();
+  if (toast) showToast(message);
+  return true;
+}
+
+function setMedicalModeEnabled(on, { toast = true } = {}) {
+  const prev = isMedicalModeEnabled();
+  if (on === prev) {
+    syncMedicalBadge();
+    syncModeMenuButtons();
+    return true;
+  }
+  let message = '';
+  if (on) {
+    const studyWasOn = isStudyModeOn();
+    if (studyWasOn) setStudyModeEnabled(false, { toast: false });
+    try { localStorage.setItem(MEDICAL_MODE_STORAGE_KEY, 'on'); } catch (_) {}
+    message = studyWasOn ? 'Medical Mode: ON（Study Modeをオフにしました）' : 'Medical Mode: ON';
+  } else {
+    try { localStorage.setItem(MEDICAL_MODE_STORAGE_KEY, 'off'); } catch (_) {}
+    message = 'Medical Mode: OFF';
+  }
+  syncMedicalBadge();
+  syncModeMenuButtons();
+  if (toast) showToast(message);
+  return true;
+}
+
+function ensureMedicalModeAvailability({ notify = true } = {}) {
+  // No longer gated by model
+  syncModeMenuButtons();
+}
+
 function setupEmptyState() {
   const heroInput = $('#heroInput');
   const heroSend = $('#heroSend');
@@ -105,8 +299,10 @@ function setupEmptyState() {
   const reasoningBtn = $('#reasoningBtn');
   const reasoningSub = $('#reasoningSub');
   const studyModeBtn = $('#studyModeBtn');
+  const medicalModeBtn = $('#medicalModeBtn');
   // 既存変数は上に移動
-  const chips = document.querySelectorAll('.chip');
+  // Purpose chips in empty state (限定セレクタ)
+  const chips = document.querySelectorAll('.purpose-chip');
   chips.forEach((c) => c.addEventListener('click', () => {
     heroInput.value = c.dataset.suggest || '';
     heroInput.focus();
@@ -133,14 +329,8 @@ function setupEmptyState() {
     // クリックでメニューをトグル
     newChatHero.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Open menu and refresh Study Mode label
-      try {
-        const on = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
-        if (studyModeBtn) {
-          studyModeBtn.textContent = on ? '📚 Study Mode をオフ' : '📚 Study Mode をオン';
-          studyModeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        }
-      } catch (_) {}
+      // Open menu and refresh mode toggles
+      syncModeMenuButtons();
       if (heroMenu.hasAttribute('hidden')) {
         heroMenu.removeAttribute('hidden');
       } else {
@@ -168,14 +358,16 @@ function setupEmptyState() {
         'google/gemini-2.5-flash-lite',
         'google/gemini-2.5-flash',
         'google/gemini-2.5-pro',
+        'openai/gpt-4o',
         'openai/chatgpt-4o-latest',
         'amazon/nova-lite-v1',
-        'amazon/nova-pro-v1'
+        'amazon/nova-pro-v1',
+        'qwen/qwen2.5-vl-32b-instruct:free'
       ]);
       const isVision = visionCapable.has(currentModel);
       if (!isVision) {
         import('./settings.js').then(() => {}).catch(() => {});
-        import('../ui/toast.js').then(({ showToast }) => showToast('この機能は GLM-4.5V 選択時のみ利用できます')).catch(() => {});
+        import('../ui/toast.js').then(({ showToast }) => showToast('この機能は Vision対応モデル選択時のみ利用できます')).catch(() => {});
         return;
       }
       // ファイル入力を動的作成
@@ -209,18 +401,15 @@ function setupEmptyState() {
 
     // 「Study Mode」トグル（全モデル対応）
     studyModeBtn?.addEventListener('click', () => {
-      try {
-        const cur = localStorage.getItem('lumora_study_mode') || 'off';
-        const next = cur === 'on' ? 'off' : 'on';
-        localStorage.setItem('lumora_study_mode', next);
-        if (studyModeBtn) {
-          studyModeBtn.textContent = next === 'on' ? '📚 Study Mode をオフ' : '📚 Study Mode をオン';
-          studyModeBtn.setAttribute('aria-pressed', next === 'on' ? 'true' : 'false');
-        }
-        try { import('../ui/toast.js').then(({ showToast }) => showToast(`Study Mode: ${next === 'on' ? 'ON' : 'OFF'}`)); } catch (_) {}
-        try { syncStudyBadge(); } catch (_) {}
-      } catch (_) {}
+      const desired = !isStudyModeOn();
+      setStudyModeEnabled(desired);
       heroMenu.setAttribute('hidden', '');
+    });
+
+    medicalModeBtn?.addEventListener('click', () => {
+      const desired = !isMedicalModeEnabled();
+      const ok = setMedicalModeEnabled(desired);
+      if (ok) heroMenu.setAttribute('hidden', '');
     });
 
     // 「思考力を設定する」サブメニュー
@@ -302,6 +491,39 @@ function setupComposer() {
   const count = document.getElementById('charCount');
   const micBtn = document.getElementById('micBtn');
   const micIndicator = document.getElementById('micIndicator');
+  const evoToggleBtn = document.getElementById('evoToggleBtn');
+  // Composer tools (+ menu)
+  const plusBtn = document.getElementById('composerPlus');
+  const compMenu = document.getElementById('composerMenu');
+  const compAttach = document.getElementById('composerAttachBtn');
+  const compThink = document.getElementById('composerThinkMoreBtn');
+  const compStudy = document.getElementById('composerStudyModeBtn');
+  const compMedical = document.getElementById('composerMedicalModeBtn');
+  const canvasEnableToggle = document.getElementById('canvasEnableToggle');
+  const canvasModeGroup = document.getElementById('canvasModeOptions');
+  const compReasoning = document.getElementById('composerReasoningBtn');
+  const compReasoningSub = document.getElementById('composerReasoningSub');
+  // Quick template items
+  const tplSumm = document.getElementById('compTplSummarize');
+  const tplTrans = document.getElementById('compTplTranslate');
+  const tplExplain = document.getElementById('compTplExplain');
+  const tplPrompt = document.getElementById('compTplPrompt');
+
+  const syncCanvasMenuOptions = () => {
+    if (!canvasEnableToggle || !canvasModeGroup) return;
+    const prefs = getCanvasPreferences();
+    canvasEnableToggle.checked = prefs.enabled;
+    const activeMode = prefs.enabled ? prefs.storedMode : 'off';
+    canvasModeGroup.querySelectorAll('input[name="canvasMode"]').forEach((radio) => {
+      if (!prefs.enabled) {
+        radio.checked = radio.value === 'off';
+        radio.disabled = true;
+      } else {
+        radio.disabled = false;
+        radio.checked = radio.value === activeMode;
+      }
+    });
+  };
   // モデル変更時にも reasoning メニュー表示状態を同期（GPT-5 系に対応）
   window.addEventListener('model-changed', () => {
     try {
@@ -311,6 +533,11 @@ function setupComposer() {
       const isGpt5 = id === 'openai/gpt-5' || id === 'openai/gpt-5-mini' || id === 'openai/gpt-5-nano';
       btn.style.display = isGpt5 ? 'block' : 'none';
     } catch (_) {}
+    ensureMedicalModeAvailability({ notify: true });
+  });
+  window.addEventListener('canvas-prefs-changed', () => {
+    try { refreshCanvasPreferences(); } catch (_) {}
+    syncCanvasMenuOptions();
   });
   // 念のため初期状態で非表示を徹底
   try { micIndicator?.setAttribute('hidden', ''); micBtn?.setAttribute('aria-pressed', 'false'); micBtn?.classList.remove('recording'); } catch {}
@@ -378,6 +605,170 @@ function setupComposer() {
 
   // 音声入力
   setupSpeechInput({ micBtn, micIndicator, input });
+
+  // ===== Composer + menu setup =====
+  if (plusBtn && !plusBtn.__bound) {
+    plusBtn.__bound = true;
+    plusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Sync mode toggle labels
+      syncModeMenuButtons();
+      syncCanvasMenuOptions();
+      if (compMenu?.hasAttribute('hidden')) compMenu.removeAttribute('hidden'); else compMenu?.setAttribute('hidden', '');
+      compReasoningSub?.setAttribute('hidden', '');
+    });
+    // click outside closes
+    document.addEventListener('click', (e) => {
+      if (!compMenu || compMenu.hasAttribute('hidden')) return;
+      const wrap = document.querySelector('.composer-menu-wrap');
+      if (wrap && !wrap.contains(e.target)) { compMenu.setAttribute('hidden', ''); compReasoningSub?.setAttribute('hidden', ''); }
+    });
+  }
+
+  // Attachments from composer
+  compAttach?.addEventListener('click', () => {
+    compMenu?.setAttribute('hidden', '');
+    const currentModel = localStorage.getItem('lumora_model') || '';
+    const visionCapable = new Set([
+      // Vision-capable models in Lumora
+      'z-ai/glm-4.5v', // legacy alias if available
+      'google/gemini-2.5-flash-lite',
+      'google/gemini-2.5-flash',
+      'google/gemini-2.5-pro',
+      'openai/gpt-4o',
+      'openai/chatgpt-4o-latest', // legacy id
+      'amazon/nova-lite-v1',
+      'amazon/nova-pro-v1',
+      'qwen/qwen2.5-vl-32b-instruct:free'
+    ]);
+    const isVision = visionCapable.has(currentModel);
+    if (!isVision) {
+      import('../ui/toast.js').then(({ showToast }) => showToast('この機能は Vision対応モデル選択時のみ利用できます'));
+      return;
+    }
+    const inputFile = document.createElement('input');
+    inputFile.type = 'file';
+    inputFile.accept = 'image/*,application/pdf';
+    inputFile.multiple = true;
+    inputFile.onchange = async () => {
+      const files = Array.from(inputFile.files || []);
+      if (files.length === 0) return;
+      try {
+        const enc = await Promise.all(files.map(f => fileToDataUrl(f)));
+        const current = JSON.parse(localStorage.getItem('lumora_attachments') || '[]');
+        const next = current.concat(enc.map((x, i) => ({ name: files[i].name, dataUrl: x })));
+        localStorage.setItem('lumora_attachments', JSON.stringify(next));
+        import('../ui/toast.js').then(({ showToast }) => showToast(`${files.length}件を添付しました`));
+        refreshHeroPreview();
+      } catch (_) {}
+    };
+    inputFile.click();
+  });
+
+  // Think more (reasoning effort) from composer
+  compThink?.addEventListener('click', () => {
+    compMenu?.setAttribute('hidden', '');
+    if (!isGpt5Selected()) { tipReasoningOnlyForGpt5(); return; }
+    localStorage.setItem('lumora_reasoning', JSON.stringify({ effort: 'high' }));
+    import('../ui/toast.js').then(({ showToast }) => showToast('思考力: High を適用（次回送信時）'));
+  });
+
+  // Study Mode toggle from composer
+  compStudy?.addEventListener('click', () => {
+    const desired = !isStudyModeOn();
+    setStudyModeEnabled(desired);
+    compMenu?.setAttribute('hidden', '');
+  });
+
+  compMedical?.addEventListener('click', () => {
+    const desired = !isMedicalModeEnabled();
+    const ok = setMedicalModeEnabled(desired);
+    if (ok) compMenu?.setAttribute('hidden', '');
+  });
+
+  canvasEnableToggle?.addEventListener('change', () => {
+    const enabled = canvasEnableToggle.checked;
+    persistCanvasEnabled(enabled);
+    syncCanvasMenuOptions();
+  });
+
+  canvasModeGroup?.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!target || target.name !== 'canvasMode') return;
+    const mode = target.value;
+    persistCanvasMode(mode);
+    if (!canvasEnableToggle?.checked && mode !== 'off') {
+      canvasEnableToggle.checked = true;
+      persistCanvasEnabled(true);
+    }
+    syncCanvasMenuOptions();
+  });
+
+  syncCanvasMenuOptions();
+
+  // Reasoning submenu
+  compReasoning?.addEventListener('click', () => {
+    if (!isGpt5Selected()) { tipReasoningOnlyForGpt5(); return; }
+    const open = compReasoningSub?.hasAttribute('hidden');
+    if (open) compReasoningSub?.removeAttribute('hidden'); else compReasoningSub?.setAttribute('hidden', '');
+  });
+  compReasoningSub?.querySelectorAll('.sub-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const effort = btn.getAttribute('data-effort');
+      localStorage.setItem('lumora_reasoning', JSON.stringify({ effort }));
+      compReasoningSub?.setAttribute('hidden', '');
+      compMenu?.setAttribute('hidden', '');
+      import('../ui/toast.js').then(({ showToast }) => showToast(`思考力: ${String(effort).toUpperCase()} を適用（次回送信時）`));
+    });
+  });
+
+  // ===== Quick templates (composer menu) =====
+  const applyTpl = (text) => {
+    try { input.value = text; input.focus(); input.dispatchEvent(new Event('input')); } catch (_) {}
+    compMenu?.setAttribute('hidden', '');
+  };
+  tplSumm?.addEventListener('click', () => applyTpl('この会話全体を3点で要約してください'));
+  tplTrans?.addEventListener('click', () => applyTpl('この内容を英語に自然に翻訳してください'));
+  tplExplain?.addEventListener('click', () => applyTpl('初心者にも分かるように丁寧に解説してください。ポイントは箇条書きでお願いします。'));
+  tplPrompt?.addEventListener('click', () => applyTpl('目的: \n制約: \n出力フォーマット: \n\n上記に基づき、高品質なプロンプトを提案してください。'));
+
+  // (Composer inline hints were removed by request)
+
+  // Reasoning button visibility based on model
+  const syncCompReasoning = () => {
+    const id = localStorage.getItem('lumora_model') || '';
+    const isGpt5 = id === 'openai/gpt-5' || id === 'openai/gpt-5-mini' || id === 'openai/gpt-5-nano';
+    if (compReasoning) compReasoning.style.display = isGpt5 ? 'block' : 'none';
+  };
+  syncCompReasoning();
+  window.addEventListener('model-changed', syncCompReasoning);
+
+  // Evo toggle (per-chat temporary setting)
+  const syncEvoBtn = () => {
+    try {
+      const on = isEvoOnForCurrentChat();
+      if (!evoToggleBtn) return;
+      evoToggleBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      evoToggleBtn.textContent = on ? '進化' : '高速';
+      evoToggleBtn.title = on ? '進化ループ ON（🔄 進化）' : '進化ループ OFF（⚡ 高速）';
+    } catch (_) {}
+  };
+  try { syncEvoBtn(); } catch (_) {}
+  evoToggleBtn?.addEventListener('click', () => {
+    try {
+      const chatId = state.currentChatId;
+      if (!chatId) return;
+      const on = isEvoOnForCurrentChat();
+      const next = !on;
+      state.chats[chatId] = state.chats[chatId] || {};
+      state.chats[chatId].evo = state.chats[chatId].evo || {};
+      state.chats[chatId].evo.mode = next ? 'on' : 'off';
+      state.save();
+      syncEvoBtn();
+      import('../ui/toast.js').then(({ showToast }) => showToast(`進化ループ: ${next ? 'ON 🔄' : 'OFF ⚡'}`));
+      try { const chip = document.getElementById('evoModeChip'); if (chip) { chip.textContent = next ? '進化' : '高速'; chip.classList.toggle('fast', !next); } } catch(_){}
+    } catch (_) {}
+  });
 }
 
 function insertDateSeparatorIfNeeded(container, when) {
@@ -404,7 +795,7 @@ function appendMessage(role, content, meta = {}) {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const when = meta.createdAt ? new Date(meta.createdAt) : new Date();
   insertDateSeparatorIfNeeded(messagesEl, when);
-  const node = renderMessageBubble({ id, role, content, model: meta.model, createdAt: when, confidence: meta.confidence });
+  const node = renderMessageBubble({ id, role, content, model: meta.model, createdAt: when, confidence: meta.confidence, meta });
   messagesEl.appendChild(node);
   scrollToBottom(messagesEl);
   return { id, node };
@@ -432,11 +823,6 @@ export function appendAndSend(text) {
     }
   } catch (_) {}
   const modelLabel = labelFor(modelId) || getSelectedModelLabel();
-  const { node: aiNode } = appendMessage('assistant', '', { model: modelLabel, createdAt: new Date() });
-  // Auto ルーティング時にサーバから通知される実モデルで上書き
-  let resolvedModelLabel = modelLabel;
-  let resolvedModelId = modelId;
-  let stopTyping = showTyping(aiNode.querySelector('.content'), { modelId });
 
   // reasoning 設定
   let reasoning = null;
@@ -444,6 +830,7 @@ export function appendAndSend(text) {
   // 添付（GLM-4.5V のみ利用）
   const messages = state.getMessages(state.currentChatId);
   const enhancedMessages = [...messages];
+  let medicalContext = null;
   // ===== System Prompt Edit + Emotion Guard (client-side) =====
   try {
     const userPromptGlobal = localStorage.getItem('lumora_system_prompt') || '';
@@ -496,10 +883,68 @@ export function appendAndSend(text) {
   }
   // ===== Study Mode (separate system prompt; all models) =====
   try {
-    const studyOn = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
-    if (studyOn) {
+    if (isStudyModeOn()) {
       // Put Study Mode system message at the very front so it takes precedence
       enhancedMessages.unshift({ role: 'system', content: STUDY_MODE_PROMPT });
+    }
+  } catch (_) {}
+  try {
+    const medicalEligible = isMedicalModeEnabled();
+    if (medicalEligible) {
+      let consult = { type: 'general' };
+      try {
+        const history = (messages || []).filter(m => m.role === 'user').map(m => String(m.content || ''));
+        consult = inferMedicalConsultType({ userText: text, history });
+      } catch (_) {}
+      medicalContext = { enabled: true, type: consult.type, guidance: buildMedicalGuidance(consult.type) };
+      enhancedMessages.unshift({ role: 'system', content: MEDICAL_MODE_SYSTEM_PROMPT });
+    }
+  } catch (_) {}
+  // ===== Canvas directive helper (only when Canvas is enabled) =====
+  try {
+    const prefs = getCanvasPreferences();
+    if (prefs && prefs.mode !== 'off') {
+      const CANVAS_HELPER_PROMPT = `あなたは Lumora Canvas™ と連携しています。ユーザーが「完成形の成果物（サイト/文書/テキスト）」を明確に求めている場合、通常の回答に加えて、最後に該当する Canvas ブロックを1つだけ追加してください。
+
+使用するフォーマット（いずれか1つ）：
+- 完成した HTML ページ:
+[[canvasCallHtmlSite]]
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>タイトル</title>
+  </head>
+  <body>
+    <!-- ここに本文（eval と document.write は使用しない） -->
+  </body>
+</html>
+[[/canvasCallHtmlSite]]
+
+- 完成した Markdown 文書:
+[[canvasCallMarkdown]]
+# タイトル
+
+本文…
+[[/canvasCallMarkdown]]
+
+- 完成したテキスト文書:
+[[canvasCallTextDoc]]
+本文テキスト…
+[[/canvasCallTextDoc]]
+
+ルール:
+- ブロック内部は「生の内容」のみ（説明文・コメント・コードフェンスは入れない）。
+- HTML では eval() と document.write() を使わない。
+- ユーザーが完全な文書/サイトを要求していない場合はブロックを追加しない。
+- 追加は最も適切な形式の1ブロックのみ。その他の説明はブロック外に記述。`;
+      enhancedMessages.unshift({ role: 'system', content: CANVAS_HELPER_PROMPT });
+    }
+  } catch (_) {}
+  // ===== RVI prompt injection (single-model only) =====
+  try {
+    if (isRviEnabled() && modelId !== 'lumora/pro') {
+      enhancedMessages.unshift({ role: 'system', content: RVI_SYSTEM_PROMPT });
     }
   } catch (_) {}
   try {
@@ -534,6 +979,31 @@ export function appendAndSend(text) {
       }
     }
   } catch (_) {}
+
+  // ===== Lumora Pro via Model Selector (multi-model) =====
+  try {
+    const chosenId = modelId;
+    const isProMulti = String(chosenId) === 'lumora/pro';
+    if (isProMulti) {
+      const selected = (() => { try { return JSON.parse(localStorage.getItem('lumora_pro_models') || '[]'); } catch (_) { return []; } })().filter(Boolean).slice(0, 4);
+      if (selected.length === 0) {
+        import('../ui/toast.js').then(({ showToast }) => showToast('Proの使用モデルを設定してください（設定→Pro）'));
+        setSending(false);
+        return;
+      }
+      // Always aggregate with GPT‑5 Nano per spec（設定では選択のみ）
+      const aggregateOn = true;
+      runMultiModelFlow({ selected, baseMessages: enhancedMessages, reasoning, plugins: (function(){ try { return JSON.parse(localStorage.getItem('lumora_plugins') || 'null'); } catch (_) { return null; } })(), userText: text, aggregateOn, medicalContext });
+      return;
+    }
+  } catch (_) {}
+
+  // ===== Single-model flow (existing) =====
+  const { node: aiNode } = appendMessage('assistant', '', { model: modelLabel, createdAt: new Date() });
+  // Auto ルーティング時にサーバから通知される実モデルで上書き
+  let resolvedModelLabel = modelLabel;
+  let resolvedModelId = modelId;
+  let stopTyping = showTyping(aiNode.querySelector('.content'), { modelId });
 
   const aborter = sendMessageStream({
     model: modelId,
@@ -576,8 +1046,26 @@ export function appendAndSend(text) {
     },
     onDone() {
       stopTyping();
-      // 保存: Markdownの生テキストを保存（履歴復元時も正しく描画される）
-      const finalRaw = aiNode.querySelector('.content').dataset.raw || aiNode.querySelector('.content').innerText || '';
+      // 最終テキストを取得して RVI を抽出 → 本文をクリーン化し、RVIブロックを描画
+      const contentEl = aiNode.querySelector('.content');
+      const originalRaw = contentEl.dataset.raw || contentEl.innerText || '';
+      let cleanedText = originalRaw;
+      let rviBlocks = [];
+      try {
+        const { text, blocks } = extractRviContent(originalRaw);
+        cleanedText = text || '';
+        rviBlocks = Array.isArray(blocks) ? blocks : [];
+      } catch (_) {}
+      try {
+        import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(cleanedText); }).catch(() => { contentEl.textContent = cleanedText; });
+        contentEl.dataset.raw = cleanedText;
+      } catch (_) {}
+      try { if (rviBlocks.length) renderRviBlocks({ hostBubble: aiNode.querySelector('.bubble-main'), blocks: rviBlocks, meta: {} }); } catch (_) {}
+
+      // Canvas 処理はクリーン化後の本文に対して実施
+      const canvasResult = processCanvasMessage({ node: aiNode, raw: cleanedText }) || {};
+      const finalRaw = typeof canvasResult.raw === 'string' ? canvasResult.raw : cleanedText;
+      const canvasData = Array.isArray(canvasResult.canvas) && canvasResult.canvas.length ? canvasResult.canvas : undefined;
       // Trust layer: estimate confidence (Beta)
       let conf = null;
       try {
@@ -606,7 +1094,7 @@ export function appendAndSend(text) {
           }
         }
       } catch (_) {}
-      state.append(state.currentChatId, { role: 'assistant', content: finalRaw, model: resolvedModelLabel, confidence: conf });
+      state.append(state.currentChatId, { role: 'assistant', content: finalRaw, model: resolvedModelLabel, confidence: conf, canvas: canvasData });
       state.save();
       // Asobi: 実績カウンタ更新（送信回数）
       try {
@@ -620,6 +1108,7 @@ export function appendAndSend(text) {
       } catch (_) {}
       // 添付は一回ごとにリセット
       try { localStorage.removeItem('lumora_attachments'); localStorage.removeItem('lumora_plugins'); } catch {}
+      try { refreshHeroPreview(); } catch (_) {}
       setSending(false);
     },
     onError(err) {
@@ -633,6 +1122,445 @@ export function appendAndSend(text) {
   // 将来: 停止ボタン
   window.__abort = aborter;
   setSending(true, aborter);
+}
+
+// ===== Pro: Multi-model orchestration =====
+function runMultiModelFlow({ selected, baseMessages, reasoning, plugins, userText, aggregateOn, medicalContext }) {
+  const aborters = [];
+  const results = new Map(); // modelId -> final text
+  const nodes = new Map();   // modelId -> ai bubble node
+  const finished = new Set();
+  const medical = (medicalContext && medicalContext.enabled)
+    ? {
+        type: medicalContext.type || 'general',
+        guidance: medicalContext.guidance || buildMedicalGuidance(medicalContext.type || 'general')
+      }
+    : null;
+  // Pro Mode: indicate active session for UI effects
+  try {
+    const appEl = document.getElementById('app');
+    if (appEl) appEl.dataset.proActive = 'on';
+  } catch (_) {}
+
+  // Spawn a stream per model
+  for (const id of selected) {
+    const label = labelFor(id) || id;
+    const { node } = appendMessage('assistant', '', { model: label, createdAt: new Date() });
+    nodes.set(id, node);
+    // Mark as Pro candidate and assign a per-model hue
+    try {
+      node.classList.add('pro-candidate');
+      const hue = Array.from(String(id)).reduce((a, c) => (a + c.charCodeAt(0)) % 360, 0);
+      node.style.setProperty('--pro-h', String(hue));
+    } catch (_) {}
+    let resolvedId = id;
+    let resolvedLabel = label;
+    let stopTyping = showTyping(node.querySelector('.content'), { modelId: id });
+    const aborter = sendMessageStream({
+      model: id,
+      messages: (function(){
+        // For Pro candidate models, inject RVI prompt if enabled
+        try { if (isRviEnabled()) return [{ role: 'system', content: RVI_SYSTEM_PROMPT }, ...baseMessages]; } catch (_) {}
+        return baseMessages;
+      })(),
+      reasoning,
+      plugins,
+      onRouted(meta) {
+        try {
+          if (meta?.label) {
+            resolvedLabel = String(meta.label);
+            const modelEl = node.querySelector('.meta .model');
+            if (modelEl) modelEl.textContent = resolvedLabel;
+          }
+          if (meta?.id) {
+            resolvedId = String(meta.id);
+            try { stopTyping?.(); } catch (_) {}
+            stopTyping = showTyping(node.querySelector('.content'), { modelId: resolvedId });
+          }
+        } catch (_) {}
+      },
+      onChunk(chunk) {
+        try { stopTyping?.(); } catch (_) {}
+        const contentEl = node.querySelector('.content');
+        const rawPrev = contentEl.dataset.raw || '';
+        const rawNow = rawPrev + chunk;
+        contentEl.dataset.raw = rawNow;
+        import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(rawNow); }).catch(() => { contentEl.textContent = rawNow; });
+        scrollToBottom(document.getElementById('messages'));
+      },
+      onDone() {
+        try { stopTyping?.(); } catch (_) {}
+        const contentEl = node.querySelector('.content');
+        let finalRaw = contentEl.dataset.raw || contentEl.innerText || '';
+        if (medical) {
+          const ensured = ensureMedicalDisclaimer(finalRaw, { type: medical.type });
+          if (ensured !== finalRaw) {
+            finalRaw = ensured;
+            contentEl.dataset.raw = ensured;
+            import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(ensured); }).catch(() => { contentEl.textContent = ensured; });
+          }
+        }
+        // Extract and render RVI blocks for each Pro candidate reply
+        try {
+          let rviBlocks = [];
+          try {
+            const { text, blocks } = extractRviContent(finalRaw);
+            finalRaw = text || '';
+            rviBlocks = Array.isArray(blocks) ? blocks : [];
+          } catch (_) {}
+          try {
+            import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(finalRaw); }).catch(() => { contentEl.textContent = finalRaw; });
+            contentEl.dataset.raw = finalRaw;
+          } catch (_) {}
+          try { if (rviBlocks.length) renderRviBlocks({ hostBubble: node.querySelector('.bubble-main'), blocks: rviBlocks, meta: {} }); } catch (_) {}
+        } catch (_) {}
+        results.set(id, finalRaw);
+        finished.add(id);
+        // Confidence estimation (optional)
+        try {
+          if ((document.documentElement.dataset.betaTrust || 'off') === 'on') {
+            const conf = estimateConfidence({ text: finalRaw, modelLabel: resolvedLabel, modelId: resolvedId });
+            const metaEl = node.querySelector('.meta');
+            if (metaEl && (document.documentElement.dataset.betaConfidence || 'off') === 'on') {
+              const trustSpan = metaEl.querySelector('.trust');
+              if (trustSpan) {
+                let c = trustSpan.querySelector('.confidence');
+                const label = `confidence ${Math.round(conf * 100)}%`;
+                if (c) { c.textContent = label; } else {
+                  const span = document.createElement('span'); span.className = 'confidence'; span.title = '内容の具体性・構造・曖昧表現から推定'; span.textContent = label; trustSpan.appendChild(document.createTextNode(' · ')); trustSpan.appendChild(span);
+                }
+              }
+            }
+            // persist confidence
+            window.__lumora_state?.append(window.__lumora_state?.currentChatId, { role: 'assistant', content: finalRaw, model: resolvedLabel, confidence: conf });
+            window.__lumora_state?.save();
+          } else {
+            window.__lumora_state?.append(window.__lumora_state?.currentChatId, { role: 'assistant', content: finalRaw, model: resolvedLabel });
+            window.__lumora_state?.save();
+          }
+        } catch (_) {}
+        maybeFinish();
+      },
+      onError(err) {
+        try { stopTyping?.(); } catch (_) {}
+        node.querySelector('.content').innerHTML += `<div class=\"markdown\"><code>${(err && err.message) || 'エラー'}</code></div>`;
+        finished.add(id);
+        maybeFinish();
+      }
+    });
+    aborters.push(aborter);
+  }
+
+  // Wire abort to kill all
+  const abortAll = () => { try { aborters.forEach(a => a?.()); } catch (_) {} try { const appEl = document.getElementById('app'); if (appEl) delete appEl.dataset.proActive; } catch (_) {} };
+  window.__abort = abortAll;
+  setSending(true, abortAll);
+
+  function maybeFinish() {
+    // If all finished and aggregation on, run aggregation once
+    const allDone = selected.every(id => finished.has(id));
+    if (!allDone) return;
+    if (!aggregateOn) {
+      try {
+        // usage stats (count one send)
+        const stats = JSON.parse(localStorage.getItem('lumora_usage_stats') || '{}');
+        stats.sends = (stats.sends || 0) + 1;
+        const lastDay = stats.lastDay || '';
+        const today = new Date().toISOString().slice(0,10);
+        if (lastDay !== today) { stats.days = (stats.days || 0) + 1; stats.lastDay = today; }
+        localStorage.setItem('lumora_usage_stats', JSON.stringify(stats));
+        try { updateAchievementsUi(); } catch (_) {}
+      } catch (_) {}
+      try { localStorage.removeItem('lumora_attachments'); localStorage.removeItem('lumora_plugins'); } catch (_) {}
+      try { refreshHeroPreview(); } catch (_) {}
+      setSending(false);
+      // Clear Pro active UI state when finishing without aggregation
+      try { const appEl = document.getElementById('app'); if (appEl) delete appEl.dataset.proActive; } catch (_) {}
+      return;
+    }
+    runAggregation(results, { userText, medical });
+  }
+
+  function runAggregation(resultsMap, { userText, medical }) {
+    const aggId = localStorage.getItem('lumora_pro_integrate_model') || 'openai/gpt-5-nano';
+    const aggLabel = `${labelFor(aggId) || aggId} (統合)`;
+    // Reset evo logs for this run
+    try { const body = document.getElementById('evoLogBody'); if (body) body.innerHTML = ''; } catch(_){}
+    hideEvoIndicator();
+    const { node } = appendMessage('assistant', '', { model: aggLabel, createdAt: new Date() });
+    let stopTyping = showTyping(node.querySelector('.content'), { modelId: aggId });
+    // Style as integrated final answer
+    try {
+      node.classList.add('pro-aggregate');
+      node.style.setProperty('--pro-h', '210');
+    } catch (_) {}
+    // Build aggregation prompt
+    const pieces = [];
+    for (const id of selected) {
+      const label = labelFor(id) || id;
+      const text = resultsMap.get(id) || '';
+      pieces.push(`- ${label}:\n${text}`);
+    }
+    const medicalGuidance = medical ? `\n${medical.guidance}` : '';
+    const aggUser = `User message:\n${userText}\n\nCandidate answers:\n${pieces.join('\n\n')}\n\nInstructions:\n- Produce the best integrated final answer in the same language as the user.\n- Resolve conflicts, combine strengths, be concise.\n- Use clean Markdown and clear structure.\n- Do not mention other models or that you are merging.${medicalGuidance}`;
+    const messages = [ { role: 'system', content: 'You are Lumora GPT-5 Nano, a precise synthesis assistant. Combine multiple candidate answers into one high-quality response without referencing the merge.' }, { role: 'user', content: aggUser } ];
+    const aborter = sendMessageStream({
+      model: aggId,
+      messages,
+      onChunk(chunk) {
+        try { stopTyping?.(); } catch (_) {}
+        const contentEl = node.querySelector('.content');
+        const rawPrev = contentEl.dataset.raw || '';
+        const rawNow = rawPrev + chunk;
+        contentEl.dataset.raw = rawNow;
+        import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(rawNow); }).catch(() => { contentEl.textContent = rawNow; });
+        scrollToBottom(document.getElementById('messages'));
+      },
+      onDone() {
+        try { stopTyping?.(); } catch (_) {}
+        const contentEl = node.querySelector('.content');
+        const initialRaw = contentEl.dataset.raw || contentEl.innerText || '';
+        let processed = initialRaw;
+        if (medical) {
+          const ensured = ensureMedicalDisclaimer(initialRaw, { type: medical.type });
+          if (ensured !== processed) {
+            processed = ensured;
+            contentEl.dataset.raw = ensured;
+            import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(ensured); }).catch(() => { contentEl.textContent = ensured; });
+          }
+        }
+        // Extract and render RVI blocks for aggregated final reply
+        try {
+          let rviBlocks = [];
+          try {
+            const { text, blocks } = extractRviContent(processed);
+            processed = text || '';
+            rviBlocks = Array.isArray(blocks) ? blocks : [];
+          } catch (_) {}
+          try {
+            import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(processed); }).catch(() => { contentEl.textContent = processed; });
+            contentEl.dataset.raw = processed;
+          } catch (_) {}
+          try { if (rviBlocks.length) renderRviBlocks({ hostBubble: node.querySelector('.bubble-main'), blocks: rviBlocks, meta: {} }); } catch (_) {}
+        } catch (_) {}
+        const canvasResult = processCanvasMessage({ node, raw: processed }) || {};
+        const sanitizedRaw = typeof canvasResult.raw === 'string' ? canvasResult.raw : processed;
+        const canvasData = Array.isArray(canvasResult.canvas) && canvasResult.canvas.length ? canvasResult.canvas : undefined;
+        const evoOn = isEvoOnForCurrentChat();
+        if (!evoOn) {
+          try { window.__lumora_state?.append(window.__lumora_state?.currentChatId, { role: 'assistant', content: sanitizedRaw, model: aggLabel, canvas: canvasData }); window.__lumora_state?.save(); } catch (_) {}
+          try {
+            const stats = JSON.parse(localStorage.getItem('lumora_usage_stats') || '{}');
+            stats.sends = (stats.sends || 0) + 1;
+            const lastDay = stats.lastDay || '';
+            const today = new Date().toISOString().slice(0,10);
+            if (lastDay !== today) { stats.days = (stats.days || 0) + 1; stats.lastDay = today; }
+            localStorage.setItem('lumora_usage_stats', JSON.stringify(stats));
+            try { updateAchievementsUi(); } catch (_) {}
+          } catch (_) {}
+          try { localStorage.removeItem('lumora_attachments'); localStorage.removeItem('lumora_plugins'); } catch (_) {}
+          try { refreshHeroPreview(); } catch (_) {}
+          try { addEvoDoneLog('応答完了 ✅'); } catch(_){}
+          setSending(false);
+          try { const appEl = document.getElementById('app'); if (appEl) delete appEl.dataset.proActive; } catch (_) {}
+          return;
+        }
+        // Evo loop path
+        setupEvoLogPanelUi();
+        const rounds = getEvoRounds();
+        addEvoLog(`統合結果を受信。改良回数: ${rounds}`);
+        showEvoIndicator(1, rounds);
+        runImprovementLoop({ draft: sanitizedRaw, aggId, node, userText, total: rounds, aggLabel, medical, canvas: canvasData });
+      },
+      onError(err) {
+        try { stopTyping?.(); } catch (_) {}
+        node.querySelector('.content').innerHTML += `<div class="markdown"><code>${(err && err.message) || 'エラー'}</code></div>`;
+        setSending(false);
+        // Clear Pro active UI state
+        try { const appEl = document.getElementById('app'); if (appEl) delete appEl.dataset.proActive; } catch (_) {}
+      }
+    });
+    // Replace abort to target aggregation as well
+    const prevAbort = window.__abort;
+    window.__abort = () => { try { prevAbort?.(); } catch (_) {} try { aborter?.(); } catch (_) {} };
+  }
+  function runImprovementLoop({ draft, aggId, node, userText, total, aggLabel, medical, canvas }) {
+    // Build reference once from original candidates
+    const toTrunc = (s, n=1200) => String(s||'').slice(0,n);
+    const pieces = [];
+    const piecesForReview = [];
+    for (const id of selected) {
+      const label = labelFor(id) || id;
+      const text = results.get(id) || '';
+      pieces.push(`- ${label}:\n${text}`);
+      piecesForReview.push(`- ${label}:\n${toTrunc(text, 600)}`);
+    }
+    let current = draft;
+    let step = 0;
+    const contentEl = node.querySelector('.content');
+    if (medical) {
+      const ensured = ensureMedicalDisclaimer(current, { type: medical.type });
+      current = ensured;
+      try { contentEl.dataset.raw = ensured; } catch (_) {}
+    }
+    const canvasDirectives = Array.isArray(canvas) && canvas.length ? canvas : undefined;
+    if (canvasDirectives) {
+      restoreCanvasCallout(node, canvasDirectives);
+    }
+
+    const runStep = () => {
+      step++;
+      if (step > total) return finish();
+      showEvoIndicator(step, total);
+      addEvoLog(`改良 ${step}/${total}: 各モデルから評価を収集中…`);
+
+      // 1) Collect reviews from each selected model
+      const reviews = new Map();
+      let finished = 0;
+      const iterAborters = [];
+      const reviewSys = `You are a precise technical reviewer. Evaluate the DRAFT and provide concise critiques and suggested improvements. Keep the user's language.${medical ? ' Pay special attention to medical accuracy, safety, and adherence to the provided guardrails.' : ''}`;
+      const reviewUser = (draftText) => (
+        `User message:\n${toTrunc(userText, 800)}\n\nDRAFT (to review):\n${toTrunc(draftText, 1800)}\n\nOriginal candidates (reference, truncated):\n${piecesForReview.join('\n\n')}\n\nPlease provide:\n- Top issues (3-5 bullets)\n- Missing points (2-3)\n- Suggested edits (bullets)\n- Score: X/10 with a short justification${medical ? `\n\nMedical Mode Guardrails:\n${medical.guidance}\n評価ではガイドライン遵守の課題があれば指摘してください。` : ''}\nKeep it concise.`
+      );
+      const REVIEW_TIMEOUT_MS = 22000;
+      const timeoutGuard = setTimeout(() => {
+        try {
+          addEvoLog('一部の評価がタイムアウトしました。進行します…');
+        } catch(_){}
+        // Mark missing reviews as timeout to unblock
+        for (const id of selected) {
+          if (!reviews.has(id)) reviews.set(id, 'レビューがタイムアウト');
+        }
+        finished = selected.length;
+        tryRevise();
+      }, REVIEW_TIMEOUT_MS);
+      const tryRevise = () => {
+        if (finished < selected.length) return;
+        clearTimeout(timeoutGuard);
+        // 2) Synthesize improvements with Nano using collected reviews
+        addEvoLog('評価が揃いました。Nanoで改良案を統合中…');
+        const sys = 'You are Lumora GPT-5 Nano, an iterative improver. Use reviewers\' critiques to refine the DRAFT. Preserve correctness, add missing points, improve structure and clarity.';
+        const reviewsText = Array.from(reviews.entries()).map(([id, r]) => `- ${(labelFor(id) || id)}:\n${toTrunc(r, 1600)}`).join('\n\n');
+        const medicalExtra = medical ? `\n- Follow these Medical Mode guardrails:\n${medical.guidance}` : '';
+        const prompt = `User message:\n${toTrunc(userText, 1200)}\n\nCurrent DRAFT (truncated if long):\n${toTrunc(current, 3200)}\n\nReviewer feedback:\n${reviewsText}\n\nRevise the DRAFT:\n- Fix errors and contradictions\n- Incorporate missing strengths\n- Improve structure and headings\n- Keep citations/code intact\n- Reply only with the improved DRAFT${medicalExtra}`;
+        // stream revised draft into the same bubble
+        contentEl.dataset.raw = '';
+        let stopTyping = showTyping(contentEl, { modelId: aggId });
+        const aborter = sendMessageStream({
+          model: aggId,
+          messages: [ { role: 'system', content: sys }, { role: 'user', content: prompt } ],
+          onChunk(chunk) {
+            try { stopTyping?.(); } catch(_){}
+            const rawPrev = contentEl.dataset.raw || '';
+            const rawNow = rawPrev + chunk;
+            contentEl.dataset.raw = rawNow;
+            import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(rawNow); }).catch(() => { contentEl.textContent = rawNow; });
+            scrollToBottom(document.getElementById('messages'));
+          },
+          onDone() {
+            try { stopTyping?.(); } catch(_){}
+            current = contentEl.dataset.raw || contentEl.innerText || current;
+            if (medical) {
+              const ensured = ensureMedicalDisclaimer(current, { type: medical.type });
+              if (ensured !== current) {
+                current = ensured;
+                contentEl.dataset.raw = ensured;
+                import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(ensured); }).catch(() => { contentEl.textContent = ensured; });
+              }
+            }
+            addEvoLog(`改良 ${step}/${total} 完了`);
+            runStep();
+          },
+          onError(err) {
+            try { stopTyping?.(); } catch(_){}
+            addEvoLog(`改良中のエラー: ${(err && err.message) || 'unknown'}`);
+            finish();
+          }
+        });
+        // update abort chain for revision
+        const prevAbort = window.__abort;
+        window.__abort = () => { try { prevAbort?.(); } catch(_){} try { aborter?.(); } catch(_){} };
+      };
+
+      // Launch parallel reviews
+      for (const id of selected) {
+        const label = labelFor(id) || id;
+        let buf = '';
+        const aborter = sendMessageStream({
+          model: id,
+          messages: [ { role: 'system', content: reviewSys }, { role: 'user', content: reviewUser(current) } ],
+          reasoning,
+          onChunk(chunk) { buf += chunk; },
+          onDone() {
+            reviews.set(id, buf);
+            finished++;
+            addEvoLog(`評価完了: ${label}`);
+            try { addEvoReviewLog({ modelId: id, modelLabel: label, text: buf, step, total }); } catch(_){}
+            tryRevise();
+          },
+          onError(err) {
+            reviews.set(id, `評価に失敗: ${(err && err.message) || 'error'}`);
+            finished++;
+            addEvoLog(`評価失敗: ${label}`);
+            try { addEvoReviewLog({ modelId: id, modelLabel: label, text: `評価に失敗: ${(err && err.message) || 'error'}`, step, total }); } catch(_){}
+            tryRevise();
+          }
+        });
+        iterAborters.push(aborter);
+      }
+      // chain abort to cancel all reviews
+      const prevAbort = window.__abort;
+      window.__abort = () => { try { prevAbort?.(); } catch(_){} iterAborters.forEach(a => { try { a?.(); } catch(_){} }); };
+    };
+
+    const finish = () => {
+      hideEvoIndicator();
+      let finalText = contentEl.dataset.raw || contentEl.innerText || draft;
+      if (medical) {
+        const ensured = ensureMedicalDisclaimer(finalText, { type: medical.type });
+        if (ensured !== finalText) {
+          finalText = ensured;
+          contentEl.dataset.raw = ensured;
+          import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(ensured); }).catch(() => { contentEl.textContent = ensured; });
+        }
+      }
+      // Extract and render RVI blocks for Evo final output
+      try {
+        let rviBlocks = [];
+        try {
+          const { text, blocks } = extractRviContent(finalText);
+          finalText = text || '';
+          rviBlocks = Array.isArray(blocks) ? blocks : [];
+        } catch (_) {}
+        try {
+          import('../ui/markdown.js').then(({ renderMarkdown }) => { contentEl.innerHTML = renderMarkdown(finalText); }).catch(() => { contentEl.textContent = finalText; });
+          contentEl.dataset.raw = finalText;
+        } catch (_) {}
+        try { if (rviBlocks.length) renderRviBlocks({ hostBubble: node.querySelector('.bubble-main'), blocks: rviBlocks, meta: {} }); } catch (_) {}
+      } catch (_) {}
+      if (canvasDirectives) {
+        restoreCanvasCallout(node, canvasDirectives);
+      }
+      try { window.__lumora_state?.append(window.__lumora_state?.currentChatId, { role: 'assistant', content: finalText, model: aggLabel, canvas: canvasDirectives }); window.__lumora_state?.save(); } catch (_) {}
+      try {
+        const stats = JSON.parse(localStorage.getItem('lumora_usage_stats') || '{}');
+        stats.sends = (stats.sends || 0) + 1;
+        const lastDay = stats.lastDay || '';
+        const today = new Date().toISOString().slice(0,10);
+        if (lastDay !== today) { stats.days = (stats.days || 0) + 1; stats.lastDay = today; }
+        localStorage.setItem('lumora_usage_stats', JSON.stringify(stats));
+        try { updateAchievementsUi(); } catch (_) {}
+      } catch (_) {}
+      try { addEvoDoneLog('応答完了 ✅'); } catch(_){}
+      try { localStorage.removeItem('lumora_attachments'); localStorage.removeItem('lumora_plugins'); } catch (_) {}
+      try { refreshHeroPreview(); } catch (_) {}
+      setSending(false);
+      try { const appEl = document.getElementById('app'); if (appEl) delete appEl.dataset.proActive; } catch (_) {}
+    };
+    // Auto-open the log panel when loop starts
+    try { const panel = document.getElementById('evoLogPanel'); if (panel) { panel.removeAttribute('hidden'); panel.classList.add('open'); } } catch(_){}
+    runStep();
+  }
 }
 
 // ===== Switch chat view (no reload) =====
@@ -656,7 +1584,7 @@ export function openChatById(chatId) {
     if (messagesEl) messagesEl.style.display = 'block';
     if (composerEl) composerEl.style.display = 'flex';
     for (const m of history) {
-      appendMessage(m.role, m.content, { model: m.model, createdAt: m.createdAt });
+      appendMessage(m.role, m.content, { model: m.model, createdAt: m.createdAt, canvas: m.canvas });
     }
   }
   // Close mobile sidebar if open
@@ -682,56 +1610,69 @@ async function fileToDataUrl(file) {
 }
 
 function refreshHeroPreview() {
-  const box = document.getElementById('heroPreview');
-  if (!box) return;
+  // Update both hero and composer preview bars to keep UI in sync
+  const targets = [ document.getElementById('heroPreview'), document.getElementById('composerPreview') ].filter(Boolean);
+  if (!targets.length) return;
   let items = [];
   try { items = JSON.parse(localStorage.getItem('lumora_attachments') || '[]'); } catch (_) { items = []; }
-  box.innerHTML = '';
-  if (!items.length) { box.setAttribute('hidden', ''); return; }
-  box.removeAttribute('hidden');
-  items.forEach((a, idx) => {
-    const chip = document.createElement('div');
-    chip.className = 'attach-chip';
-    if (/^data:application\/pdf/i.test(a.dataUrl)) {
-      const pdf = document.createElement('div');
-      pdf.className = 'pdf';
-      pdf.textContent = 'PDF';
-      chip.appendChild(pdf);
-    } else {
-      const img = document.createElement('img');
-      img.alt = a.name || 'image';
-      img.src = a.dataUrl;
-      chip.appendChild(img);
-    }
-    const tools = document.createElement('div');
-    tools.className = 'tools';
-    const remove = document.createElement('button');
-    remove.textContent = '✕';
-    remove.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const next = items.slice(0, idx).concat(items.slice(idx + 1));
-      localStorage.setItem('lumora_attachments', JSON.stringify(next));
-      refreshHeroPreview();
+  for (const box of targets) {
+    box.innerHTML = '';
+    if (!items.length) { box.setAttribute('hidden', ''); continue; }
+    box.removeAttribute('hidden');
+    items.forEach((a, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'attach-chip';
+      if (/^data:application\/pdf/i.test(a.dataUrl)) {
+        const pdf = document.createElement('div');
+        pdf.className = 'pdf';
+        pdf.textContent = 'PDF';
+        chip.appendChild(pdf);
+      } else {
+        const img = document.createElement('img');
+        img.alt = a.name || 'image';
+        img.src = a.dataUrl;
+        chip.appendChild(img);
+      }
+      const tools = document.createElement('div');
+      tools.className = 'tools';
+      const remove = document.createElement('button');
+      remove.textContent = '✕';
+      remove.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const next = items.slice(0, idx).concat(items.slice(idx + 1));
+        localStorage.setItem('lumora_attachments', JSON.stringify(next));
+        refreshHeroPreview();
+      });
+      const reattach = document.createElement('button');
+      reattach.textContent = '📎';
+      reattach.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Prefer composer button when visible, fallback to hero
+        document.getElementById('composerAttachBtn')?.click() || document.getElementById('attachBtn')?.click();
+      });
+      tools.appendChild(reattach);
+      tools.appendChild(remove);
+      chip.appendChild(tools);
+      box.appendChild(chip);
     });
-    const reattach = document.createElement('button');
-    reattach.textContent = '📎';
-    reattach.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.getElementById('attachBtn')?.click();
-    });
-    tools.appendChild(reattach);
-    tools.appendChild(remove);
-    chip.appendChild(tools);
-    box.appendChild(chip);
-  });
+  }
 }
 
 // ===== Study Mode Badge =====
 function syncStudyBadge() {
   try {
-    const on = (localStorage.getItem('lumora_study_mode') || 'off') === 'on';
     const badge = document.getElementById('studyBadge');
+    if (badge) badge.style.display = isStudyModeOn() ? '' : 'none';
+  } catch (_) {}
+}
+
+function syncMedicalBadge() {
+  try {
+    const badge = document.getElementById('medicalBadge');
+    const on = isMedicalModeEnabled();
     if (badge) badge.style.display = on ? '' : 'none';
+    if (on) document.documentElement.dataset.medical = 'on';
+    else delete document.documentElement.dataset.medical;
   } catch (_) {}
 }
 
@@ -768,6 +1709,7 @@ function init() {
   // モデル注入
   injectModels();
   setupModelSelector();
+  ensureMedicalModeAvailability({ notify: false });
 
   // UIレンダリング
   renderSidebar();
@@ -777,6 +1719,26 @@ function init() {
   setupComposer();
   setupEmptyState();
   setupSettings(state);
+  initCanvas();
+  syncModeMenuButtons();
+  syncStudyBadge();
+  syncMedicalBadge();
+  if (!init.__storageBound) {
+    init.__storageBound = true;
+    window.addEventListener('storage', (e) => {
+      if (e.key === STUDY_MODE_STORAGE_KEY) {
+        syncStudyBadge();
+        syncModeMenuButtons();
+      }
+      if (e.key === MEDICAL_MODE_STORAGE_KEY) {
+        syncMedicalBadge();
+        syncModeMenuButtons();
+      }
+      if (e.key === 'lumora_canvas_enabled' || e.key === 'lumora_canvas_mode') {
+        window.dispatchEvent(new CustomEvent('canvas-prefs-changed'));
+      }
+    });
+  }
   try { syncUserProfileFromStorage(); } catch (_) {}
   // Initialize tone badge from stored settings
   try {
@@ -848,7 +1810,7 @@ function init() {
       if (messagesEl) messagesEl.style.display = 'block';
       if (composerEl) composerEl.style.display = 'flex';
       for (const m of history) {
-        appendMessage(m.role, m.content, { model: m.model, createdAt: m.createdAt });
+        appendMessage(m.role, m.content, { model: m.model, createdAt: m.createdAt, canvas: m.canvas });
       }
     }
   }
@@ -864,6 +1826,133 @@ function init() {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+
+// ===== Evolution loop helpers (Lumora Pro Mode) =====
+function getEvoGlobalOn() {
+  try { const v = localStorage.getItem('lumora_pro_evo'); return v === null ? true : v === 'on'; } catch { return true; }
+}
+function getEvoRounds() {
+  try {
+    const v = localStorage.getItem('lumora_pro_evo_rounds') || '4';
+    if (v === 'auto') return 4;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n > 0 ? n : 4;
+  } catch { return 4; }
+}
+function isEvoOnForCurrentChat() {
+  try {
+    const chatId = state.currentChatId;
+    if (!chatId) return getEvoGlobalOn();
+    const evo = state.chats[chatId]?.evo;
+    if (!evo || !evo.mode) return getEvoGlobalOn();
+    return evo.mode === 'on';
+  } catch { return getEvoGlobalOn(); }
+}
+function showEvoIndicator(step, total) {
+  try {
+    const ind = document.getElementById('evoIndicator');
+    const status = document.getElementById('evoStatus');
+    if (!ind) return;
+    if (step <= 0 || total <= 0) { ind.style.display = 'none'; ind.textContent = '進化中…'; return; }
+    ind.textContent = `進化中… (${step}/${total})`;
+    ind.style.display = '';
+    if (status) status.textContent = `改良 ${step}/${total}`;
+  } catch (_) {}
+}
+function hideEvoIndicator() { try { const ind = document.getElementById('evoIndicator'); if (ind) ind.style.display = 'none'; } catch (_) {} }
+function addEvoLog(text) {
+  try {
+    const panel = document.getElementById('evoLogPanel');
+    const body = document.getElementById('evoLogBody');
+    if (!body) return;
+    const div = document.createElement('div');
+    div.className = 'entry phase';
+    div.textContent = text;
+    body.appendChild(div);
+  } catch (_) {}
+}
+function addEvoDoneLog(text) {
+  try {
+    const body = document.getElementById('evoLogBody');
+    if (!body) return;
+    const div = document.createElement('div');
+    div.className = 'entry done';
+    div.textContent = text || '応答完了 ✅';
+    body.appendChild(div);
+    const status = document.getElementById('evoStatus');
+    if (status) status.textContent = '完了';
+  } catch (_) {}
+}
+function computeHueForId(id) {
+  try { return Array.from(String(id||'')).reduce((a, c) => (a + c.charCodeAt(0)) % 360, 0); } catch { return 210; }
+}
+function parseReviewScore(text) {
+  try {
+    const m = String(text||'').match(/(?:score|スコア)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/i);
+    if (!m) return null;
+    const v = parseFloat(m[1]);
+    if (!isFinite(v)) return null;
+    return v > 10 ? 10 : v;
+  } catch { return null; }
+}
+function addEvoReviewLog({ modelId, modelLabel, text, step, total }) {
+  try {
+    const body = document.getElementById('evoLogBody');
+    if (!body) return;
+    const entry = document.createElement('div');
+    entry.className = 'entry review';
+    const h = computeHueForId(modelId);
+    entry.style.setProperty('--h', String(h));
+    const score = parseReviewScore(text);
+    const header = document.createElement('div');
+    header.className = 'row';
+    const chip = document.createElement('span'); chip.className = 'model-chip'; chip.textContent = modelLabel || modelId;
+    header.appendChild(chip);
+    const meta = document.createElement('span'); meta.className = 'muted'; meta.textContent = `改良 ${step}/${total} 評価`;
+    header.appendChild(meta);
+    if (score !== null) {
+      const pill = document.createElement('span'); pill.className = 'score-pill'; pill.textContent = `Score ${score}/10`;
+      header.appendChild(pill);
+    }
+    entry.appendChild(header);
+    const preview = document.createElement('pre');
+    preview.className = 'preview collapsed';
+    preview.textContent = String(text||'').trim() || '(no content)';
+    entry.appendChild(preview);
+    const tools = document.createElement('div'); tools.className = 'tools';
+    const toggle = document.createElement('button'); toggle.className = 'tool-btn'; toggle.textContent = '詳細';
+    toggle.addEventListener('click', () => {
+      const collapsed = preview.classList.toggle('collapsed');
+      toggle.textContent = collapsed ? '詳細' : '閉じる';
+    });
+    const copy = document.createElement('button'); copy.className = 'tool-btn'; copy.textContent = 'コピー';
+    copy.addEventListener('click', () => { try { navigator.clipboard.writeText(preview.textContent || ''); } catch(_){} });
+    tools.appendChild(toggle); tools.appendChild(copy);
+    entry.appendChild(tools);
+    body.appendChild(entry);
+  } catch (_) {}
+}
+function setupEvoLogPanelUi() {
+  try {
+    const ind = document.getElementById('evoIndicator');
+    const panel = document.getElementById('evoLogPanel');
+    const close = document.getElementById('evoLogClose');
+    if (ind && !ind.__bound) {
+      ind.__bound = true;
+      ind.addEventListener('click', () => {
+        if (!panel) return;
+        const open = !panel.hasAttribute('hidden');
+        if (open) { panel.setAttribute('hidden', ''); panel.classList.remove('open'); }
+        else { panel.removeAttribute('hidden'); panel.classList.add('open'); }
+      });
+    }
+    close?.addEventListener('click', () => { panel?.setAttribute('hidden', ''); panel?.classList.remove('open'); });
+    // Sync mode chip
+    const modeChip = document.getElementById('evoModeChip');
+    const on = isEvoOnForCurrentChat();
+    if (modeChip) { modeChip.textContent = on ? '進化' : '高速'; modeChip.classList.toggle('fast', !on); }
+  } catch (_) {}
+}
 
 // ============== 追加UX機能 ==============
 function setSending(isSending, aborter) {

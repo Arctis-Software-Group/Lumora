@@ -45,7 +45,7 @@ if (modelsMatch) {
 
   // 新しいモデルの詳細確認
   console.log('\n🆕 新しいモデルの詳細:');
-  const newModelLabels = ['Grok Code Fast-1', 'Hermes 4 405B', 'Hermes 4 70B'];
+  const newModelLabels = ['Grok 4 Fast', 'Grok Code Fast-1', 'Hermes 4 405B', 'Hermes 4 70B'];
   newModelLabels.forEach(label => {
     const model = models.find(m => m.label === label);
     if (model) {

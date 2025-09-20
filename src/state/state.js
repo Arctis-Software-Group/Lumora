@@ -129,6 +129,8 @@ export function initState() {
         const c = this.chats[id];
         if (!c) continue;
         const base = { id: c.id, title: c.title, createdAt: c.createdAt, favorite: !!c.favorite, project: c.project || '', locked: !!c.locked };
+        // persist per-chat evo override if present
+        if (c.evo && (c.evo.mode || c.evo.rounds)) base.evo = { ...(c.evo.mode ? { mode: c.evo.mode } : {}), ...(c.evo.rounds ? { rounds: c.evo.rounds } : {}) };
         if (c.locked) {
           // ensure messagesEnc exists; do not store messages in localStorage
           persist.chats[id] = { ...base, messagesEnc: c.messagesEnc || null };
@@ -156,7 +158,8 @@ function normalizeLoadedState(raw) {
       locked,
       messages: locked ? [] : (Array.isArray(c.messages) ? c.messages : []),
       messagesEnc: c.messagesEnc || null,
-      __unlocked: false
+      __unlocked: false,
+      evo: c.evo && typeof c.evo === 'object' ? { mode: c.evo.mode || undefined, rounds: c.evo.rounds || undefined } : undefined
     };
   }
   return state;
@@ -171,4 +174,3 @@ function safeRead(key) {
 function safeWrite(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
 }
-

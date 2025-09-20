@@ -1,6 +1,8 @@
 import { renderMarkdown } from './markdown.js';
+import { restoreCanvasCallout } from './canvas.js';
+import { extractRviContent, renderRviBlocks } from './rvi/viewer.js';
 
-export function renderMessageBubble({ id, role, content, model, createdAt, confidence }) {
+export function renderMessageBubble({ id, role, content, model, createdAt, confidence, meta }) {
   const wrap = document.createElement('article');
   wrap.className = `bubble ${role} entering`;
   wrap.dataset.id = id;
@@ -14,10 +16,19 @@ export function renderMessageBubble({ id, role, content, model, createdAt, confi
   const trustHtml = trustOn && role === 'assistant'
     ? `<span class="trust">🤖 by ${metaModel || 'Model'}${showConf && confText ? ` · <span class="confidence" title="内容の具体性・構造・曖昧表現から推定">confidence ${confText}</span>` : ''}</span>`
     : `${metaModel}`;
+  let processedContent = { text: content, blocks: [] };
+  if (role === 'assistant') {
+    try {
+      processedContent = extractRviContent(content, meta?.rvi);
+    } catch (_) {
+      processedContent = { text: content, blocks: [] };
+    }
+  }
+  const safeText = processedContent.text || '';
   wrap.innerHTML = `
     <div class="avatar ${role}">${avatarText}</div>
     <div class="bubble-main">
-      <div class="content markdown">${renderMarkdown(content)}</div>
+      <div class="content markdown">${renderMarkdown(safeText)}</div>
       <div class="meta">${trustHtml} <time title="${fmtFullTime(createdAt)}">${fmtTime(createdAt)}</time></div>
   ${role === 'assistant' && document.documentElement.dataset.asobi === 'on' ? '<div class="asobi-badge" title="Asobi Mode">✨ Asobi</div>' : ''}
       <div class="actions" role="toolbar" aria-label="メッセージ操作">
@@ -33,8 +44,23 @@ export function renderMessageBubble({ id, role, content, model, createdAt, confi
     </div>
   `;
   bindActions(wrap, role);
-  enhanceMarkdownContent(wrap.querySelector('.content'));
-  observeContentUpdates(wrap.querySelector('.content'));
+  const contentEl = wrap.querySelector('.content');
+  if (contentEl) {
+    contentEl.dataset.raw = safeText;
+    enhanceMarkdownContent(contentEl);
+    observeContentUpdates(contentEl);
+  }
+  if (role === 'assistant' && meta?.canvas) {
+    try { restoreCanvasCallout(wrap, meta.canvas); } catch (_) {}
+  }
+  if (role === 'assistant' && processedContent.blocks.length) {
+    try {
+      const bubbleMain = wrap.querySelector('.bubble-main');
+      if (bubbleMain) {
+        renderRviBlocks({ hostBubble: bubbleMain, blocks: processedContent.blocks, meta });
+      }
+    } catch (_) {}
+  }
   setupCollapseIfNeeded(wrap);
   requestAnimationFrame(() => wrap.classList.remove('entering'));
   return wrap;
@@ -209,45 +235,110 @@ function enhanceMarkdownContent(container) {
   pres.forEach((pre) => {
     if (pre.closest('.code-block')) return; // 二重適用防止
     const code = pre.querySelector('code');
-    const lang = (code?.className || '').replace('language-', '') || 'text';
+    if (!code) return;
+    const raw = code.textContent || '';
+    // 言語とタイトル（pre data-* 優先）
+    const lang = (pre.dataset.lang || (code.className || '').replace('language-', '') || 'text').trim();
+    const title = (pre.dataset.title || '').trim();
+    code.dataset.raw = raw; // 行番号切替のため保持
+    // ラッパーとヘッダー
     const wrap = document.createElement('div');
     wrap.className = 'code-block';
     const header = document.createElement('div');
     header.className = 'code-header';
     const label = document.createElement('span');
     label.className = 'code-lang';
-    label.textContent = lang.toUpperCase();
-    const btn = document.createElement('button');
-    btn.className = 'code-copy';
-    btn.type = 'button';
-    btn.textContent = 'コピー';
-    btn.addEventListener('click', async (e) => {
+    label.textContent = title ? title : (lang || 'text').toUpperCase();
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-copy';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'コピー';
+    copyBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       try {
-        await navigator.clipboard.writeText(code?.innerText || '');
+        await navigator.clipboard.writeText(code.dataset.raw || code.innerText || '');
         toast('コードをコピーしました');
       } catch (_) {
         toast('コピーに失敗しました');
       }
     });
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'code-copy';
-    toggleBtn.type = 'button';
-    toggleBtn.textContent = '折りたたむ';
+    const wrapBtn = document.createElement('button');
+    wrapBtn.className = 'code-copy';
+    wrapBtn.type = 'button';
+    let wrapOn = false;
+    wrapBtn.textContent = '折返し: OFF';
+    wrapBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wrapOn = !wrapOn;
+      pre.classList.toggle('wrap', wrapOn);
+      wrapBtn.textContent = wrapOn ? '折返し: ON' : '折返し: OFF';
+    });
+    const lineBtn = document.createElement('button');
+    lineBtn.className = 'code-copy';
+    lineBtn.type = 'button';
+    let linesOn = false;
+    lineBtn.textContent = '行番号: OFF';
+    const applyLines = (on) => {
+      if (!on) {
+        // 元のテキストに戻す
+        code.innerText = code.dataset.raw || '';
+        pre.classList.remove('has-lines');
+        return;
+      }
+      const rawText = (code.dataset.raw || '').replace(/\n$/,'');
+      const parts = rawText.split('\n');
+      const html = parts.map((ln) => `<span class="code-line">${ln || '\u00A0'}</span>`).join('\n');
+      code.innerHTML = html;
+      pre.classList.add('has-lines');
+    };
+    lineBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      linesOn = !linesOn;
+      applyLines(linesOn);
+      lineBtn.textContent = linesOn ? '行番号: ON' : '行番号: OFF';
+    });
+    const collapseBtn = document.createElement('button');
+    collapseBtn.className = 'code-copy';
+    collapseBtn.type = 'button';
+    collapseBtn.textContent = '折りたたむ';
     let collapsed = false;
-    toggleBtn.addEventListener('click', (e) => {
+    collapseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       collapsed = !collapsed;
       pre.style.display = collapsed ? 'none' : 'block';
-      toggleBtn.textContent = collapsed ? '展開する' : '折りたたむ';
+      collapseBtn.textContent = collapsed ? '展開する' : '折りたたむ';
     });
     header.appendChild(label);
-    header.appendChild(btn);
-    header.appendChild(toggleBtn);
+    header.appendChild(copyBtn);
+    header.appendChild(wrapBtn);
+    header.appendChild(lineBtn);
+    header.appendChild(collapseBtn);
     pre.parentNode?.insertBefore(wrap, pre);
     wrap.appendChild(header);
     wrap.appendChild(pre);
   });
+  // 目次（見出しが複数ある場合）
+  try {
+    if (!container.querySelector('.md-toc')) {
+      const hs = container.querySelectorAll('h1, h2, h3');
+      const items = Array.from(hs).filter(h => h.id && (h.tagName === 'H1' || h.tagName === 'H2' || h.tagName === 'H3'));
+      if (items.length >= 3) {
+        const nav = document.createElement('nav');
+        nav.className = 'md-toc';
+        nav.setAttribute('aria-label', '目次');
+        nav.innerHTML = items.map(h => {
+          const level = Number(h.tagName.slice(1));
+          const pad = level === 1 ? 0 : level === 2 ? 12 : 24;
+          return `<a href="#${h.id}" style="padding-left:${pad}px">${h.textContent || ''}</a>`;
+        }).join('');
+        container.insertBefore(nav, container.firstChild);
+      }
+    }
+  } catch (_) {}
+  // 数式（KaTeX auto-render）
+  try {
+    import('./math.js').then(({ renderMathIn }) => renderMathIn(container)).catch(() => {});
+  } catch (_) {}
 }
 
 function setupCollapseIfNeeded(wrap) {
@@ -273,4 +364,3 @@ function setupCollapseIfNeeded(wrap) {
     new ResizeObserver(() => check()).observe(content);
   } catch (_) {}
 }
-

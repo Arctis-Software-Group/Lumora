@@ -11,6 +11,8 @@ import { errorMiddleware } from './middlewares/error.js';
 import chatRoute from './routes/chat.js';
 import usageRoute from './routes/usage.js';
 import moderationsRoute from './routes/moderations.js';
+import microPauseRoute from './routes/micro-pause.js';
+import adminUnlockRateLimit from './routes/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +51,8 @@ export function createApp() {
   app.post('/api/chat', rateLimitMiddleware(), chatRoute);
   app.get('/api/usage', usageRoute);
   app.post('/api/moderations', moderationsRoute);
+  app.post('/api/micro-pause', microPauseRoute);
+  app.post('/api/admin/unlock-rate-limit', adminUnlockRateLimit);
 
   app.use(errorMiddleware());
 
