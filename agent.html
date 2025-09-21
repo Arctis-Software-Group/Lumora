@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Lumora Agent</title>
+    <meta name="description" content="Lumora Agent - 自律型タスク遂行AI" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./src/styles/tokens.css" />
+    <link rel="stylesheet" href="./src/styles/theme.css" />
+    <link rel="stylesheet" href="./src/styles/layout.css" />
+    <link rel="stylesheet" href="./src/styles/app.css" />
+    <link rel="stylesheet" href="./src/styles/chat.css" />
+    <link rel="stylesheet" href="./src/styles/glass.css" />
+    <link rel="stylesheet" href="./src/styles/simple.css" />
+    <!-- Agent-specific styles -->
+    <link rel="stylesheet" href="./src/styles/agent.css" />
+  </head>
+  <body class="agent-mode">
+    <a href="#agentInput" class="skip-link">Agent入力欄へスキップ</a>
+    <div id="bg-gradient" aria-hidden="true"></div>
+
+    <!-- Main Agent Layout -->
+    <div class="agent-container">
+      <!-- Left Sidebar -->
+      <aside id="agentSidebar" class="agent-sidebar" aria-label="Agent サイドバーとタスク管理">
+        <div class="agent-sidebar-header">
+          <div class="agent-brand">
+            <span class="agent-icon">🧠</span>
+            <h1 class="agent-title">Lumora Agent</h1>
+            <span class="agent-badge">Beta</span>
+          </div>
+          
+          <nav class="agent-nav">
+            <button id="newTaskBtn" class="agent-nav-btn primary">
+              <span class="icon">➕</span>
+              <span>新しいタスク</span>
+            </button>
+            
+            <div class="agent-filters">
+              <label class="filter-label">タスクフィルタ</label>
+              <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">すべて</button>
+                <button class="filter-tab" data-filter="favorites">お気に入り</button>
+                <button class="filter-tab" data-filter="active">進行中</button>
+              </div>
+            </div>
+          </nav>
+        </div>
+
+        <div class="agent-sidebar-scroll">
+          <div id="taskList" class="task-list" aria-label="タスク一覧">
+            <!-- Tasks will be dynamically inserted here -->
+          </div>
+        </div>
+
+        <div class="agent-sidebar-footer">
+          <button id="backToChatBtn" class="agent-nav-btn secondary">
+            <span class="icon">⬅️</span>
+            <span>チャットに戻る</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Central Task View -->
+      <main id="agentMain" class="agent-main" role="main">
+        <!-- Task Header -->
+        <header id="taskHeader" class="task-header" style="display: none;">
+          <div class="task-header-content">
+            <h2 id="taskTitle" class="task-title">タスクタイトル</h2>
+            <div class="task-meta">
+              <div id="costIndicator" class="cost-indicator">
+                <span class="icon">📊</span>
+                <span class="cost-text">$<span id="costValue">0.00</span> / $0.50</span>
+              </div>
+              <div id="timeIndicator" class="time-indicator">
+                <span class="icon">⏱</span>
+                <span class="time-text"><span id="timeRemaining">60</span>分 残り</span>
+              </div>
+              <div id="statusBadge" class="status-badge waiting">
+                <span class="status-dot"></span>
+                <span class="status-text">待機中</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Task Content -->
+        <div id="taskContent" class="task-content">
+          <!-- Empty State -->
+          <div id="agentEmptyState" class="agent-empty-state">
+            <div class="empty-content">
+              <div class="empty-icon">🧠</div>
+              <h2>Lumora Agent</h2>
+              <p>やりたいことを簡単に指示するだけで、AIが自律的に計画を立て、ツールを使いこなし、成果物を出力します。</p>
+              <div class="empty-features">
+                <div class="feature">
+                  <span class="feature-icon">🎯</span>
+                  <span>タスク自動分解</span>
+                </div>
+                <div class="feature">
+                  <span class="feature-icon">🛠</span>
+                  <span>ツール自動選択</span>
+                </div>
+                <div class="feature">
+                  <span class="feature-icon">📄</span>
+                  <span>成果物生成</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task Execution Area -->
+          <div id="taskExecution" class="task-execution" style="display: none;">
+            <!-- Step Log -->
+            <div id="stepLog" class="step-log">
+              <h3 class="step-log-title">実行ログ</h3>
+              <div id="stepList" class="step-list">
+                <!-- Steps will be added dynamically -->
+              </div>
+            </div>
+
+            <!-- Recommended Actions -->
+            <div id="recommendedActions" class="recommended-actions" style="display: none;">
+              <h3 class="actions-title">次にできること</h3>
+              <div id="actionCards" class="action-cards">
+                <!-- Action cards will be added dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Preview Panel -->
+      <aside id="agentPreview" class="agent-preview" aria-label="プレビューパネル">
+        <div class="preview-header">
+          <div class="preview-tabs">
+            <button class="preview-tab active" data-tab="document">
+              <span class="tab-icon">📄</span>
+              <span>Document</span>
+            </button>
+            <button class="preview-tab" data-tab="slide">
+              <span class="tab-icon">🎞</span>
+              <span>Slide</span>
+            </button>
+            <button class="preview-tab" data-tab="sheet">
+              <span class="tab-icon">📊</span>
+              <span>Sheet</span>
+            </button>
+            <button class="preview-tab" data-tab="code">
+              <span class="tab-icon">💻</span>
+              <span>Code</span>
+            </button>
+          </div>
+          
+          <div class="preview-status">
+            <div id="liveIndicator" class="live-indicator" style="display: none;">
+              <span class="live-dot"></span>
+              <span>Live</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-content">
+          <div id="thinkingAnimation" class="thinking-animation" style="display: none;">
+            <div class="thinking-ripples">
+              <div class="ripple"></div>
+              <div class="ripple"></div>
+              <div class="ripple"></div>
+            </div>
+            <p>thinking...</p>
+          </div>
+
+          <div id="previewFrame" class="preview-frame">
+            <div class="preview-placeholder">
+              <span class="placeholder-icon">📄</span>
+              <p>ここにプレビューが表示されます</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-footer">
+          <div class="export-menu">
+            <button id="exportBtn" class="export-btn" disabled>
+              <span class="icon">💾</span>
+              <span>エクスポート</span>
+            </button>
+            <div id="exportOptions" class="export-options" style="display: none;">
+              <button class="export-option" data-format="pdf">PDF</button>
+              <button class="export-option" data-format="docx">DOCX</button>
+              <button class="export-option" data-format="pptx">PPTX</button>
+              <button class="export-option" data-format="csv">CSV</button>
+              <button class="export-option" data-format="html">HTML</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Input Composer (Full Width Bottom) -->
+    <footer id="agentComposer" class="agent-composer" aria-label="Agent 入力欄">
+      <div class="composer-content">
+        <div class="composer-input-wrapper">
+          <textarea 
+            id="agentInput" 
+            class="agent-input" 
+            placeholder="やりたいことを入力してください..."
+            rows="1"
+            aria-label="タスクを入力"></textarea>
+          
+          <div class="composer-controls">
+            <div class="mode-selector">
+              <label for="modeSelect" class="mode-label">実行モード:</label>
+              <select id="modeSelect" class="mode-select">
+                <option value="auto">全自動モード</option>
+                <option value="step">ステップ確認モード</option>
+              </select>
+            </div>
+            
+            <button id="runAgentBtn" class="run-agent-btn">
+              <span class="btn-icon">🧠</span>
+              <span class="btn-text">Agentに任せる</span>
+            </button>
+            
+            <button id="stopAgentBtn" class="stop-agent-btn" style="display: none;">
+              <span class="btn-icon">⏹</span>
+              <span class="btn-text">停止</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Agent Scripts -->
+    <script type="module" src="./src/agent/main.js"></script>
+  </body>
+</html>
