@@ -1,42 +1,42 @@
 :root {
-  /* ===== カラー（ベース/テキスト） ===== */
-  --bg-app: #f5f7fb;
-  --bg-0: #0b0b0c;
-  --text-0: #0f172a;
-  --text-1: #1e293b;
-  --text-muted: #64748b;
-  --separator: rgba(15, 23, 42, 0.08);
-  --separator-weak: rgba(15, 23, 42, 0.05);
-  /* Neutral scale that matches the refined palette */
-  --neutral-50: #f8fafc;
-  --neutral-100: #f1f5f9;
-  --neutral-200: #e2e8f0;
-  --neutral-300: #cbd5f5;
-  --neutral-400: #94a3b8;
-  --neutral-500: #64748b;
+  /* ===== カラー（ベース/テキスト） - 洗練された色彩 ===== */
+  --bg-app: #fafbfd;
+  --bg-0: #09090b;
+  --text-0: #0a0a0f;
+  --text-1: #18181b;
+  --text-muted: #71717a;
+  --separator: rgba(9, 9, 11, 0.08);
+  --separator-weak: rgba(9, 9, 11, 0.04);
+  /* Neutral scale - 統一感のあるグレースケール */
+  --neutral-50: #fafafa;
+  --neutral-100: #f4f4f5;
+  --neutral-200: #e4e4e7;
+  --neutral-300: #d4d4d8;
+  --neutral-400: #a1a1aa;
+  --neutral-500: #71717a;
 
-  /* ===== サーフェス階調 ===== */
-  --surface-weak: rgba(255, 255, 255, 0.7);
-  --surface: rgba(255, 255, 255, 0.88);
+  /* ===== サーフェス階調 - 洗練された深み ===== */
+  --surface-weak: rgba(255, 255, 255, 0.65);
+  --surface: rgba(255, 255, 255, 0.92);
   --surface-strong: #ffffff;
   --surface-ultra: #ffffff;
-  --ios-group: rgba(255,255,255,0.92);
-  --ios-card: #ffffff;
+  --ios-group: rgba(255,255,255,0.88);
+  --ios-card: rgba(255, 255, 255, 0.98);
 
-  /* ===== 枠線/影 ===== */
-  --hairline-light: rgba(15, 23, 42, 0.06);
-  --hairline-strong: rgba(15, 23, 42, 0.08);
+  /* ===== 枠線/影 - 現代的で軽やかな表現 ===== */
+  --hairline-light: rgba(9, 9, 11, 0.05);
+  --hairline-strong: rgba(9, 9, 11, 0.09);
   --border: var(--hairline-strong);
-  --border-strong: rgba(37, 99, 235, 0.22);
-  --shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-  --shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 32px 70px rgba(15, 23, 42, 0.16);
-  --elev-1: 0 10px 26px rgba(15, 23, 42, 0.1);
-  --elev-2: 0 18px 44px rgba(15, 23, 42, 0.12);
-  --blur-xs: 10px;
-  --blur-sm: 16px;
-  --blur: 22px;
-  --blur-lg: 28px;
+  --border-strong: rgba(59, 130, 246, 0.25);
+  --shadow: 0 4px 24px rgba(9, 9, 11, 0.06), 0 1px 3px rgba(9, 9, 11, 0.1);
+  --shadow-sm: 0 2px 12px rgba(9, 9, 11, 0.04), 0 1px 2px rgba(9, 9, 11, 0.06);
+  --shadow-lg: 0 12px 48px rgba(9, 9, 11, 0.08), 0 4px 12px rgba(9, 9, 11, 0.12);
+  --elev-1: 0 4px 16px rgba(9, 9, 11, 0.06);
+  --elev-2: 0 8px 28px rgba(9, 9, 11, 0.08);
+  --blur-xs: 8px;
+  --blur-sm: 12px;
+  --blur: 20px;
+  --blur-lg: 32px;
   /* Motion tokens */
   --ease-smooth: cubic-bezier(.22,.61,.36,1);
   --ease-out: cubic-bezier(.2, .0, 0, 1);
@@ -44,41 +44,45 @@
   --dur: 200ms;
   --dur-slow: 320ms;
 
-  /* ===== ブランド/状態色（iOSアクセントに寄せる） ===== */
-  --brand: #2563eb;
-  --brand-strong: #1d4ed8;
-  --accent: #22d3ee;
-  --success: #2ac769;
-  --warning: #f0a020;
-  --danger: #ff3b30;
-  --grad-brand: linear-gradient(135deg, #2563eb 0%, #6366f1 50%, #22d3ee 100%);
-  --grad-brand-soft: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(34,211,238,0.12));
-  --tint-blue: #2563eb;
-  --tint-green: #22c55e;
+  /* ===== ブランド/状態色 - 鮮やかで調和のとれた配色 ===== */
+  --brand: #3b82f6;
+  --brand-strong: #2563eb;
+  --accent: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --grad-brand: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+  --grad-brand-soft: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(6,182,212,0.08));
+  --tint-blue: #3b82f6;
+  --tint-green: #10b981;
   --tint-orange: #f59e0b;
   --tint-red: #ef4444;
   --tint-purple: #8b5cf6;
 
-  /* ===== タイポグラフィ ===== */
+  /* ===== タイポグラフィ - 読みやすさと美しさの両立 ===== */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Hiragino Sans", "Noto Sans JP", ui-sans-serif, system-ui,
     Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-size-body: 15px; /* iOS default size */
-  --line-height-body: 1.7;
+  --font-size-body: 15px;
+  --line-height-body: 1.75;
   --font-size-small: 13px;
-  --line-height-small: 1.6;
+  --line-height-small: 1.65;
   --font-size-meta: 12px;
   --line-height-meta: 1.5;
-  --font-size-code: 13px;
-  --line-height-code: 1.6;
-  /* 見出し（流体タイポ） */
-  --fz-display: clamp(28px, 5.2vw, 44px);
-  --fz-h1: clamp(22px, 3.6vw, 30px);
-  --tracking-tight: 0.005em;
-  --tracking-normal: 0.01em;
+  --font-size-code: 13.5px;
+  --line-height-code: 1.65;
+  /* 見出し - バランスの取れたサイズ階層 */
+  --fz-display: clamp(32px, 5vw, 48px);
+  --fz-h1: clamp(24px, 3.5vw, 32px);
+  --fz-h2: clamp(20px, 2.8vw, 26px);
+  --fz-h3: clamp(18px, 2.2vw, 22px);
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.015em;
   --weight-regular: 400;
-  --weight-medium: 600;
-  --weight-bold: 800;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
 
   /* ===== スペーシング ===== */
   --sp-1: 4px;
@@ -91,12 +95,13 @@
   --sp-8: 40px;
   --sp-9: 56px;
 
-  /* ===== 角丸（iOS寄り） ===== */
-  --radius-1: 10px;
-  --radius-2: 14px;
-  --radius-3: 18px;
-  --radius-4: 24px;
-  --radius-round: 999px;
+  /* ===== 角丸 - 現代的で統一感のある丸み ===== */
+  --radius-1: 8px;
+  --radius-2: 12px;
+  --radius-3: 16px;
+  --radius-4: 20px;
+  --radius-5: 24px;
+  --radius-round: 9999px;
 
   /* ===== コンポーネント寸法 ===== */
   --topbar-h: 78px;
@@ -104,12 +109,12 @@
   --composer-h: 72px;
   --safe-bottom: env(safe-area-inset-bottom);
 
-  /* ===== フィードバック/アクセシビリティ ===== */
-  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.24);
-  --focus-border: var(--brand-strong);
-  --scrollbar-thumb: rgba(37, 99, 235, 0.32);
-  --scrollbar-thumb-hover: rgba(37, 99, 235, 0.45);
-  --scrollbar-track: rgba(15,23,42,0.06);
+  /* ===== フィードバック/アクセシビリティ - 明確で分かりやすい ===== */
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  --focus-border: var(--brand);
+  --scrollbar-thumb: rgba(59, 130, 246, 0.28);
+  --scrollbar-thumb-hover: rgba(59, 130, 246, 0.4);
+  --scrollbar-track: rgba(9,9,11,0.04);
 
   /* ===== コードテーマ ===== */
   --code-bg: #0f172a;
@@ -137,29 +142,29 @@ html[data-density="compact"] {
   --line-height-body: 1.6;
 }
 
-/* ===== ダークテーマ用トークン上書き ===== */
+/* ===== ダークテーマ用トークン - バランスの取れた暗色調 ===== */
 html[data-theme="dark"] {
-  --bg-app: #0b1120;
-  --text-0: #cbd5f5;
-  --text-1: #f8fafc;
-  --text-muted: #94a3b8;
-  --surface-weak: rgba(17, 24, 39, 0.55);
-  --surface: rgba(17, 24, 39, 0.68);
-  --surface-strong: rgba(15, 23, 42, 0.86);
-  --surface-ultra: rgba(10, 18, 35, 0.94);
-  --separator: rgba(148, 163, 184, 0.28);
-  --separator-weak: rgba(148, 163, 184, 0.18);
-  --border: rgba(148, 163, 184, 0.24);
-  --shadow: 0 24px 60px rgba(2, 6, 23, 0.76);
-  --shadow-sm: 0 16px 38px rgba(2, 6, 23, 0.6);
-  --shadow-lg: 0 40px 100px rgba(2, 6, 23, 0.78);
-  --ios-group: rgba(13, 20, 38, 0.82);
-  --ios-card: rgba(17, 24, 39, 0.88);
-  --code-bg: #0b1120;
-  --code-fg: #e2e8f0;
-  --scrollbar-thumb: rgba(59, 130, 246, 0.4);
-  --scrollbar-thumb-hover: rgba(96, 165, 250, 0.6);
-  --scrollbar-track: rgba(15, 23, 42, 0.55);
+  --bg-app: #0a0a0f;
+  --text-0: #e4e4e7;
+  --text-1: #fafafa;
+  --text-muted: #a1a1aa;
+  --surface-weak: rgba(24, 24, 27, 0.6);
+  --surface: rgba(24, 24, 27, 0.75);
+  --surface-strong: rgba(24, 24, 27, 0.9);
+  --surface-ultra: rgba(18, 18, 20, 0.95);
+  --separator: rgba(228, 228, 231, 0.12);
+  --separator-weak: rgba(228, 228, 231, 0.06);
+  --border: rgba(228, 228, 231, 0.1);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.25);
+  --ios-group: rgba(24, 24, 27, 0.8);
+  --ios-card: rgba(24, 24, 27, 0.9);
+  --code-bg: #18181b;
+  --code-fg: #e4e4e7;
+  --scrollbar-thumb: rgba(59, 130, 246, 0.35);
+  --scrollbar-thumb-hover: rgba(59, 130, 246, 0.5);
+  --scrollbar-track: rgba(24, 24, 27, 0.6);
 }
 
 /* ===== Simple Mode: minimal, calm palette ===== */
