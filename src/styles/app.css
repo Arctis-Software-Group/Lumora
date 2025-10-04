@@ -1,11 +1,12 @@
 .bubble {
   display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 10px;
-  padding: 10px 6px;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  padding: 12px 8px;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* 自分のメッセージは右寄せ配置（視認性向上） */
-.bubble.user { grid-template-columns: 1fr 32px; }
+.bubble.user { grid-template-columns: 1fr 36px; }
 .bubble.user .avatar { order: 2; }
 .bubble.user .bubble-main { order: 1; }
 .bubble.user .actions { justify-content: flex-end; }
@@ -29,33 +30,68 @@
   box-shadow: var(--focus-ring);
 }
 .avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(120deg, var(--brand), var(--accent));
+  width: 36px; 
+  height: 36px; 
+  border-radius: 50%;
+  background: var(--grad-brand);
   color: white;
-  display: grid; place-items: center;
-  font-size: 14px; font-weight: 700;
+  display: grid; 
+  place-items: center;
+  font-size: 15px; 
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-sm);
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-.avatar.user { background: #111827; }
-.content {
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3);
-  padding: 12px 14px;
+.avatar.user { 
+  background: linear-gradient(135deg, #18181b, #27272a); 
+}
+.avatar:hover {
+  transform: scale(1.05);
   box-shadow: var(--shadow);
-  transition: background var(--dur) var(--ease-smooth), border-color var(--dur) var(--ease-smooth), box-shadow var(--dur) var(--ease-smooth);
-  position: relative;
 }
-.bubble .meta { font-size: 12px; opacity: 0.55; margin-top: 6px; }
+.content {
+  background: rgba(255,255,255,0.95);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-3);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  line-height: var(--line-height-body);
+}
+.bubble .meta { 
+  font-size: var(--font-size-meta); 
+  opacity: 0.6; 
+  margin-top: 8px; 
+  line-height: var(--line-height-meta);
+}
 .bubble .meta .trust { display: inline-flex; align-items: center; gap: 6px; }
-.bubble .meta .trust .model { font-weight: 600; opacity: 0.9; }
-.bubble .meta .confidence { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); opacity: 0.85; }
-.bubble .meta .confidence::before { content: '•'; color: var(--brand); font-weight: 700; }
+.bubble .meta .trust .model { font-weight: var(--weight-semibold); opacity: 0.9; }
+.bubble .meta .confidence { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 4px; 
+  padding: 3px 8px; 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-round); 
+  background: var(--surface); 
+  opacity: 0.85; 
+}
+.bubble .meta .confidence::before { content: '•'; color: var(--brand); font-weight: var(--weight-bold); }
 
 /* Bubble actions: show on hover for cleaner look */
-.bubble .actions { opacity: .0; transition: opacity var(--dur-fast) var(--ease-smooth), transform var(--dur-fast) var(--ease-smooth); }
+.bubble .actions { 
+  opacity: 0; 
+  transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), 
+              transform 150ms cubic-bezier(0.4, 0, 0.2, 1); 
+}
 .bubble:hover .actions { opacity: 1; }
 /* Subtle lift on content hover */
-.bubble .content:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(30,30,60,0.18), 0 6px 14px rgba(30,30,60,0.08); }
+.bubble .content:hover { 
+  transform: translateY(-1px); 
+  box-shadow: var(--shadow); 
+  border-color: var(--border-strong);
+}
 
 /* Focus-visible accessibility rings */
 .icon-btn:focus-visible,
@@ -65,17 +101,25 @@ input.toggle:focus-visible,
 select.enhanced-select:focus-visible,
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(107, 107, 255, 0.24), 0 0 0 1px var(--brand);
+  box-shadow: var(--focus-ring);
+  border-color: var(--focus-border);
 }
 
-.assistant .content { background: var(--surface-ultra); }
+.assistant .content { 
+  background: rgba(255,255,255,0.98); 
+}
 .user .content {
-  background: linear-gradient(180deg, rgba(10,132,255,0.94), rgba(58,157,255,0.94));
+  background: var(--grad-brand);
   color: #fff;
   border-color: transparent;
+  box-shadow: var(--shadow);
 }
 .user .content a { color: #fff; text-decoration: underline; }
-.user .markdown code { background: rgba(255,255,255,0.18); color: #fff; border-color: rgba(255,255,255,0.22); }
+.user .markdown code { 
+  background: rgba(255,255,255,0.18); 
+  color: #fff; 
+  border-color: rgba(255,255,255,0.22); 
+}
 
 /* iMessage-like bubble tails */
 .assistant .content::after {

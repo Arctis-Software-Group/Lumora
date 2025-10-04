@@ -21,14 +21,17 @@
   backdrop-filter: saturate(180%) blur(var(--blur-sm));
   -webkit-backdrop-filter: saturate(180%) blur(var(--blur-sm));
   background: var(--ios-group);
-  padding: 12px;
+  padding: 14px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   position: relative;
   width: var(--sidebar-w);
-  transition: width .22s ease, padding .22s ease, background .2s ease, border-color .2s ease;
+  transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1), 
+              padding 220ms cubic-bezier(0.4, 0, 0.2, 1), 
+              background 200ms ease, 
+              border-color 200ms ease;
 }
 
 /* 折りたたみ時の安定した幅/余白（レイアウトの中途半端を排除） */
@@ -90,13 +93,36 @@ html[data-newui="on"] .container.sidebar-collapsed #toggleSidebarBtn { width: 40
 html[data-newui="on"] .container.sidebar-collapsed #newChatBtn { display: none; }
 .search-box input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border: 1px solid var(--separator);
   border-radius: var(--radius-2);
   background: var(--ios-card);
+  font-size: var(--font-size-body);
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: var(--line-height-body);
 }
-.chat-list { overflow: auto; padding-right: 6px; background: var(--ios-card); border: 1px solid var(--separator-weak); border-radius: var(--radius-3); padding: 6px; box-shadow: var(--shadow-sm); }
-.cl-group-header { font-size: 12px; font-weight: 700; opacity: .65; padding: 10px 8px 4px; letter-spacing: .4px; text-transform: uppercase; }
+.search-box input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+.chat-list { 
+  overflow: auto; 
+  padding: 8px; 
+  background: var(--ios-card); 
+  border: 1px solid var(--separator-weak); 
+  border-radius: var(--radius-3); 
+  box-shadow: var(--shadow-sm); 
+}
+.cl-group-header { 
+  font-size: 11px; 
+  font-weight: var(--weight-semibold); 
+  opacity: 0.7; 
+  padding: 12px 10px 6px; 
+  letter-spacing: 0.05em; 
+  text-transform: uppercase; 
+  color: var(--text-muted);
+}
 .chat-list .item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px;
@@ -214,15 +240,16 @@ html[data-newui="on"] .new-pill:hover { transform: translateY(-1px); }
 }
 .composer {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
   border-top: 1px solid var(--separator);
   background: var(--ios-group);
-  backdrop-filter: saturate(180%) blur(var(--blur-sm));
-  -webkit-backdrop-filter: saturate(180%) blur(var(--blur-sm));
-  padding: 12px 12px calc(12px + var(--safe-bottom));
+  backdrop-filter: saturate(180%) blur(var(--blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
+  padding: 14px 16px calc(14px + var(--safe-bottom));
+  box-shadow: 0 -2px 16px rgba(9, 9, 11, 0.04);
 }
-html[data-density="compact"] .composer { gap: 8px; }
+html[data-density="compact"] .composer { gap: 10px; padding: 10px 12px calc(10px + var(--safe-bottom)); }
 .composer .composer-menu-wrap { position: relative; display: grid; align-items: center; }
 /* Plus button: match hero search button styling */
 .composer .composer-menu-wrap > #composerPlus {
@@ -253,20 +280,23 @@ html[data-density="compact"] .composer { gap: 8px; }
   resize: none;
   border: 1px solid var(--separator);
   background: var(--ios-card);
-  border-radius: var(--radius-round);
-  padding: 12px 14px;
-  line-height: 1.5;
+  border-radius: var(--radius-3);
+  padding: 13px 16px;
+  line-height: var(--line-height-body);
   max-height: 200px;
-  min-height: 44px;
-  box-shadow: var(--shadow);
-  transition: border-color var(--dur) var(--ease-smooth), box-shadow var(--dur) var(--ease-smooth), transform var(--dur) var(--ease-smooth);
+  min-height: 46px;
+  box-shadow: var(--shadow-sm);
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: var(--font-size-body);
+  color: var(--text-1);
 }
 /* Hero-like focus polish for composer textarea */
 .composer textarea:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(107,107,255,0.10), 0 16px 48px rgba(30,30,60,0.18);
+  box-shadow: var(--focus-ring), var(--shadow);
   outline: none;
   transform: translateY(-1px);
+  background: white;
 }
 .composer-actions { display: flex; gap: 8px; align-items: center; }
 
@@ -279,26 +309,34 @@ html[data-density="compact"] .composer { gap: 8px; }
   }
 }
 
-/* 空状態 */
+/* 空状態 - モダンで魅力的なウェルカム画面 */
 .empty-state {
   display: grid;
   place-items: center;
   text-align: center;
-  gap: 12px;
-  /* ヘッダ下からやや下に配置（上に寄り過ぎないように） */
+  gap: 16px;
   min-height: calc(100vh - var(--topbar-h));
-  padding-top: 16vh;
-  padding-bottom: 8vh;
+  padding-top: 14vh;
+  padding-bottom: 10vh;
 }
 .empty-state h1 {
   font-size: var(--fz-display);
-  margin: 8px 0;
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  background: linear-gradient(135deg, var(--brand), var(--accent));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  margin: 10px 0;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  background: var(--grad-brand);
+  -webkit-background-clip: text; 
+  background-clip: text; 
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
 }
-.empty-state p { opacity: 0.75; margin: 0 0 8px; color: var(--text-muted); }
+.empty-state p { 
+  opacity: 0.8; 
+  margin: 0 0 10px; 
+  color: var(--text-muted); 
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
 
 /* 検索バー風ヒーロー入力 */
 .hero-input {
